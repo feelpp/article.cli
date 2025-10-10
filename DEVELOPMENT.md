@@ -155,7 +155,7 @@ For each existing article repository:
 ```toml
 [zotero]
 api_key = "your_zotero_api_key_here"
-group_id = "6219333"  # or use user_id instead
+group_id = "4678293"  # Default for article.template, or use user_id instead
 output_file = "references.bib"
 
 [git]

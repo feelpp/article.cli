@@ -68,7 +68,7 @@ Create a `.article-cli.toml` file in your project root for project-specific sett
 ```toml
 [zotero]
 api_key = "your_api_key_here"
-group_id = "6219333"
+group_id = "4678293"  # Default for article.template
 # user_id = "your_user_id"  # alternative to group_id
 output_file = "references.bib"
 

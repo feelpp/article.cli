@@ -239,7 +239,7 @@ api_key = "your_api_key_here"
 
 # Either user_id OR group_id (not both)
 # user_id = "your_user_id"
-group_id = "6219333"
+group_id = "4678293"  # Default group ID for article.template
 
 # Output file for bibliography
 output_file = "references.bib"
