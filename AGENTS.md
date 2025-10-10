@@ -38,8 +38,11 @@ When releasing a new version, **ALL** of these files must be updated with the ne
 - [ ] Update CHANGELOG.md links
 - [ ] Commit changes: `git commit -m "chore: bump version to 1.0.X"`
 - [ ] Push changes: `git push`
-- [ ] Create GitHub release: `gh release create v1.0.X`
-- [ ] Verify PyPI publication via trusted publishing
+- [ ] Create and push git tag: `git tag v1.0.X -m "Release v1.0.X" && git push origin v1.0.X`
+- [ ] **Create GitHub release**: `gh release create v1.0.X --title "Release v1.0.X" --notes "Release notes here"`
+  - ⚠️ **IMPORTANT**: The PyPI publishing workflow is triggered by GitHub releases, NOT by git tags
+  - The workflow listens for `release: types: [published]` events
+- [ ] Verify PyPI publication via trusted publishing at https://github.com/feelpp/article.cli/actions
 
 ### Semantic Versioning Guide:
 
@@ -197,6 +200,36 @@ pip install black flake8 mypy types-requests pytest
 - **PyPI Package**: https://pypi.org/project/article-cli/
 - **CI/CD Actions**: https://github.com/feelpp/article.cli/actions
 - **PyPI Trusted Publishing**: https://pypi.org/manage/project/article-cli/settings/publishing/
+
+## 🐛 Troubleshooting
+
+### PyPI Publishing Not Triggered
+
+**Issue**: Pushed git tag but PyPI publishing workflow didn't run.
+
+**Cause**: The workflow is triggered by `release: types: [published]`, not by git tag pushes.
+
+**Solution**:
+```bash
+# After pushing your tag:
+git tag v1.0.X -m "Release v1.0.X"
+git push origin v1.0.X
+
+# Create the GitHub release (this triggers PyPI publishing):
+gh release create v1.0.X --title "Release v1.0.X" --notes "Release notes"
+```
+
+**Verification**: Check workflow runs at https://github.com/feelpp/article.cli/actions
+
+### Version Sync Issues
+
+**Issue**: PyPI and package versions don't match.
+
+**Cause**: Forgot to update one of the version files.
+
+**Solution**: Always update BOTH files:
+- `pyproject.toml` - Line with `version = "1.0.X"`
+- `src/article_cli/__init__.py` - Line with `__version__ = "1.0.X"`
 
 ---
 
