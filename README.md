@@ -1,5 +1,9 @@
 # Article CLI
 
+[![CI](https://github.com/feelpp/article.cli/actions/workflows/ci.yml/badge.svg)](https://github.com/feelpp/article.cli/actions/workflows/ci.yml)
+[![PyPI version](https://badge.fury.io/py/article-cli.svg)](https://badge.fury.io/py/article-cli)
+[![Python Support](https://img.shields.io/pypi/pyversions/article-cli.svg)](https://pypi.org/project/article-cli/)
+
 A command-line tool for managing LaTeX articles with git integration and Zotero bibliography synchronization.
 
 ## Features
@@ -21,8 +25,8 @@ pip install article-cli
 ### From Source
 
 ```bash
-git clone https://github.com/feelpp/article-cli.git
-cd article-cli
+git clone https://github.com/feelpp/article.cli.git
+cd article.cli
 pip install -e .
 ```
 
