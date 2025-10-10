@@ -5,7 +5,6 @@ Supports both environment variables and TOML configuration files.
 """
 
 import os
-import sys
 from pathlib import Path
 from typing import Dict, Any, Optional, Union
 import argparse
@@ -44,11 +43,12 @@ class Config:
 
         # Look for default config files (in priority order)
         search_paths = [
-            Path.cwd() / ".article-cli.toml",           # Dedicated config file (highest priority)
-            Path.cwd() / "pyproject.toml",              # Project config file
-            Path.cwd() / "article-cli.toml",            # Alternative dedicated file
+            Path.cwd()
+            / ".article-cli.toml",  # Dedicated config file (highest priority)
+            Path.cwd() / "pyproject.toml",  # Project config file
+            Path.cwd() / "article-cli.toml",  # Alternative dedicated file
             Path.home() / ".config" / "article-cli" / "config.toml",  # XDG config
-            Path.home() / ".article-cli.toml",          # User config (lowest priority)
+            Path.home() / ".article-cli.toml",  # User config (lowest priority)
         ]
 
         for path in search_paths:
@@ -63,43 +63,52 @@ class Config:
 
         if config_path and tomllib:
             try:
-                with open(config_path, 'rb') as f:
+                with open(config_path, "rb") as f:
                     full_config = tomllib.load(f)
-                
+
                 # Handle pyproject.toml vs dedicated config file
                 if config_path.name == "pyproject.toml":
                     # Extract article-cli config section from pyproject.toml
-                    self._config_data = full_config.get("tool", {}).get("article-cli", {})
+                    self._config_data = full_config.get("tool", {}).get(
+                        "article-cli", {}
+                    )
                     if self._config_data:
-                        print(f"Loaded configuration from: {config_path} [tool.article-cli]")
+                        print(
+                            f"Loaded configuration from: {config_path} [tool.article-cli]"
+                        )
                     else:
                         # Fallback: look for legacy sections at root level
                         legacy_sections = ["zotero", "git", "latex"]
-                        self._config_data = {k: v for k, v in full_config.items() if k in legacy_sections}
+                        self._config_data = {
+                            k: v for k, v in full_config.items() if k in legacy_sections
+                        }
                         if self._config_data:
                             print(f"Loaded legacy configuration from: {config_path}")
                 else:
                     # Dedicated config file - use as-is
                     self._config_data = full_config
                     print(f"Loaded configuration from: {config_path}")
-                    
+
             except Exception as e:
                 print(f"Warning: Could not load config file {config_path}: {e}")
                 self._config_data = {}
         elif config_path and not tomllib:
-            print("Warning: TOML support not available. Install with: pip install tomli")
+            print(
+                "Warning: TOML support not available. Install with: pip install tomli"
+            )
             self._config_data = {}
         else:
             self._config_data = {}
 
-    def get(self, section: str, key: str, default: Any = None, 
-           env_var: Optional[str] = None) -> Any:
+    def get(
+        self, section: str, key: str, default: Any = None, env_var: Optional[str] = None
+    ) -> Any:
         """
         Get configuration value with priority: CLI args > env vars > config file > default
 
         Args:
             section: Configuration section name
-            key: Configuration key name  
+            key: Configuration key name
             default: Default value if not found
             env_var: Environment variable name to check
 
@@ -119,33 +128,52 @@ class Config:
     def get_zotero_config(self) -> Dict[str, Optional[str]]:
         """Get Zotero-specific configuration"""
         return {
-            'api_key': self.get('zotero', 'api_key', env_var='ZOTERO_API_KEY'),
-            'user_id': self.get('zotero', 'user_id', env_var='ZOTERO_USER_ID'),  
-            'group_id': self.get('zotero', 'group_id', env_var='ZOTERO_GROUP_ID'),
-            'output_file': self.get('zotero', 'output_file', 'references.bib', env_var='BIBTEX_FILE'),
+            "api_key": self.get("zotero", "api_key", env_var="ZOTERO_API_KEY"),
+            "user_id": self.get("zotero", "user_id", env_var="ZOTERO_USER_ID"),
+            "group_id": self.get("zotero", "group_id", env_var="ZOTERO_GROUP_ID"),
+            "output_file": self.get(
+                "zotero", "output_file", "references.bib", env_var="BIBTEX_FILE"
+            ),
         }
 
     def get_git_config(self) -> Dict[str, Any]:
         """Get Git-specific configuration"""
         return {
-            'auto_push': self.get('git', 'auto_push', False),
-            'default_branch': self.get('git', 'default_branch', 'main'),
+            "auto_push": self.get("git", "auto_push", False),
+            "default_branch": self.get("git", "default_branch", "main"),
         }
 
     def get_latex_config(self) -> Dict[str, Any]:
         """Get LaTeX-specific configuration"""
         default_extensions = [
-            '.aux', '.bbl', '.blg', '.log', '.out', '.pyg',
-            '.fls', '.synctex.gz', '.toc', '.fdb_latexmk',
-            '.idx', '.ilg', '.ind', '.chl', '.lof', '.lot'
+            ".aux",
+            ".bbl",
+            ".blg",
+            ".log",
+            ".out",
+            ".pyg",
+            ".fls",
+            ".synctex.gz",
+            ".toc",
+            ".fdb_latexmk",
+            ".idx",
+            ".ilg",
+            ".ind",
+            ".chl",
+            ".lof",
+            ".lot",
         ]
-        
+
         return {
-            'clean_extensions': self.get('latex', 'clean_extensions', default_extensions),
-            'build_dir': self.get('latex', 'build_dir', '.'),
+            "clean_extensions": self.get(
+                "latex", "clean_extensions", default_extensions
+            ),
+            "build_dir": self.get("latex", "build_dir", "."),
         }
 
-    def validate_zotero_config(self, args: argparse.Namespace) -> Dict[str, Optional[str]]:
+    def validate_zotero_config(
+        self, args: argparse.Namespace
+    ) -> Dict[str, Optional[str]]:
         """
         Validate and merge Zotero configuration from args and config
 
@@ -161,30 +189,30 @@ class Config:
         config = self.get_zotero_config()
 
         # Override with command line arguments
-        if hasattr(args, 'api_key') and args.api_key:
-            config['api_key'] = args.api_key
-        if hasattr(args, 'user_id') and args.user_id:
-            config['user_id'] = args.user_id
-        if hasattr(args, 'group_id') and args.group_id:
-            config['group_id'] = args.group_id
-        if hasattr(args, 'output') and args.output:
-            config['output_file'] = args.output
+        if hasattr(args, "api_key") and args.api_key:
+            config["api_key"] = args.api_key
+        if hasattr(args, "user_id") and args.user_id:
+            config["user_id"] = args.user_id
+        if hasattr(args, "group_id") and args.group_id:
+            config["group_id"] = args.group_id
+        if hasattr(args, "output") and args.output:
+            config["output_file"] = args.output
 
         # Validate required fields
-        if not config['api_key']:
+        if not config["api_key"]:
             raise ValueError(
                 "Zotero API key is required. Set via:\n"
                 "  - Command line: --api-key YOUR_KEY\n"
                 "  - Environment: export ZOTERO_API_KEY=YOUR_KEY\n"
-                "  - Config file: [zotero] api_key = \"YOUR_KEY\""
+                '  - Config file: [zotero] api_key = "YOUR_KEY"'
             )
 
-        if not config['user_id'] and not config['group_id']:
+        if not config["user_id"] and not config["group_id"]:
             raise ValueError(
                 "Either Zotero user ID or group ID is required. Set via:\n"
                 "  - Command line: --user-id ID or --group-id ID\n"
                 "  - Environment: export ZOTERO_USER_ID=ID or ZOTERO_GROUP_ID=ID\n"
-                "  - Config file: [zotero] user_id = \"ID\" or group_id = \"ID\""
+                '  - Config file: [zotero] user_id = "ID" or group_id = "ID"'
             )
 
         return config
@@ -236,7 +264,7 @@ build_dir = "."
 """
 
         try:
-            with open(path, 'w') as f:
+            with open(path, "w") as f:
                 f.write(sample_config)
             print(f"Created sample configuration file: {path}")
             return path
