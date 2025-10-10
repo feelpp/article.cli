@@ -76,7 +76,7 @@ article-cli clean
 # .article-cli.toml
 [zotero]
 api_key = "your_api_key_here"
-group_id = "6219333"
+group_id = "4678293"  # Default for article.template
 output_file = "references.bib"
 
 [git]
