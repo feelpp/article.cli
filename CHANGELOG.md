@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2024-10-10
+
+### Fixed
+- Resolved Black code formatting issues across all Python files
+- Fixed MyPy type checking errors and import-untyped warnings
+- Added proper type stubs (types-requests) to CI workflow
+- Enhanced mypy configuration with explicit module overrides
+- Fixed PyPI publishing authentication setup
+
+### Changed
+- Updated default ZOTERO_GROUP_ID to 4678293 for article.template projects
+- Enhanced CI/CD pipeline with better type checking and dependency management
+- Added `__main__.py` for python -m article_cli execution support
+
+### Documentation
+- Updated README, DEVELOPMENT.md with correct default group ID
+- Added comprehensive PyPI setup and migration documentation
+
 ## [1.0.0] - 2024-10-10
 
 ### Added
@@ -47,4 +65,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `article-cli config show` - Show current configuration
 - `article-cli config create` - Create sample configuration
 
+[1.0.1]: https://github.com/feelpp/article.cli/releases/tag/v1.0.1
 [1.0.0]: https://github.com/feelpp/article.cli/releases/tag/v1.0.0
