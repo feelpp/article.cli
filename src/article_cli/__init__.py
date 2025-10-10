@@ -8,7 +8,7 @@ This package provides tools for:
 - Git hooks setup
 """
 
-__version__ = "1.0.2"
+__version__ = "1.0.3"
 __author__ = "Christophe Prud'homme"
 __email__ = "prudhomm@cemosis.fr"
 
