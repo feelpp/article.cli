@@ -7,7 +7,7 @@ error handling, and rate limiting.
 
 import os
 import sys
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Dict, Any
 import time
 
 try:
@@ -31,22 +31,22 @@ class Colors:
     UNDERLINE = "\033[4m"
 
 
-def print_success(msg: str):
+def print_success(msg: str) -> None:
     """Print success message in green"""
     print(f"{Colors.OKGREEN}✓ {msg}{Colors.ENDC}")
 
 
-def print_error(msg: str):
+def print_error(msg: str) -> None:
     """Print error message in red"""
     print(f"{Colors.FAIL}✗ Error: {msg}{Colors.ENDC}", file=sys.stderr)
 
 
-def print_warning(msg: str):
+def print_warning(msg: str) -> None:
     """Print warning message in yellow"""
     print(f"{Colors.WARNING}⚠ Warning: {msg}{Colors.ENDC}")
 
 
-def print_info(msg: str):
+def print_info(msg: str) -> None:
     """Print info message in cyan"""
     print(f"{Colors.OKCYAN}ℹ {msg}{Colors.ENDC}")
 
@@ -56,15 +56,21 @@ class ZoteroBibTexUpdater:
 
     def __init__(
         self,
-        api_key: str,
+        api_key: Optional[str],
         user_id: Optional[str] = None,
         group_id: Optional[str] = None,
-        output_file: str = "references.bib",
+        output_file: Optional[str] = None,
     ):
+        # Validate required parameters
+        if not api_key:
+            raise ValueError("API key is required")
+        if not user_id and not group_id:
+            raise ValueError("Either user_id or group_id is required")
+
         self.api_key = api_key
         self.user_id = user_id
         self.group_id = group_id
-        self.output_file = output_file
+        self.output_file = output_file or "references.bib"
         self.base_url = "https://api.zotero.org"
         self.limit = 100
         self._group_name: Optional[str] = None
@@ -88,7 +94,7 @@ class ZoteroBibTexUpdater:
         else:
             raise ValueError("Either user_id or group_id must be provided")
 
-    def _get_group_info(self) -> Optional[dict]:
+    def _get_group_info(self) -> Optional[Dict[str, Any]]:
         """Get group information including name"""
         if not self.group_id:
             return None
@@ -97,7 +103,7 @@ class ZoteroBibTexUpdater:
             url = f"{self.base_url}/groups/{self.group_id}"
             response = self.session.get(url, timeout=10)
             response.raise_for_status()
-            return response.json()
+            return response.json()  # type: ignore
         except Exception as e:
             print_warning(f"Could not fetch group info: {e}")
             return None
@@ -128,7 +134,11 @@ class ZoteroBibTexUpdater:
         Returns:
             Tuple of (response_content, headers_dict)
         """
-        params = {"format": "bibtex", "start": start, "limit": self.limit}
+        params: Dict[str, str] = {
+            "format": "bibtex",
+            "start": str(start),
+            "limit": str(self.limit),
+        }
 
         try:
             response = self.session.get(url, params=params, timeout=30)
@@ -209,7 +219,7 @@ class ZoteroBibTexUpdater:
 
         return filtered_content, len(empty_entries)
 
-    def _backup_existing_file(self):
+    def _backup_existing_file(self) -> None:
         """Create a backup of the existing BibTeX file"""
         if os.path.exists(self.output_file):
             backup_file = f"{self.output_file}.backup"
