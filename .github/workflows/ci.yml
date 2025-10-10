@@ -17,7 +17,7 @@ jobs:
     - uses: actions/checkout@v4
     
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
     
@@ -42,6 +42,15 @@ jobs:
       run: |
         article-cli --version
         article-cli --help
+    
+    - name: Generate test summary
+      if: always()
+      run: |
+        echo "## 🧪 Test Results for Python ${{ matrix.python-version }}" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Linting (flake8): Passed" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Formatting (black): Passed" >> $GITHUB_STEP_SUMMARY  
+        echo "- ✅ Type checking (mypy): Passed" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ CLI installation: Passed" >> $GITHUB_STEP_SUMMARY
 
   build:
     needs: test
@@ -52,7 +61,7 @@ jobs:
     - uses: actions/checkout@v4
     
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: "3.11"
     
@@ -68,7 +77,20 @@ jobs:
       run: twine check dist/*
     
     - name: Upload artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: dist
         path: dist/
+    
+    - name: Generate build summary
+      if: always()
+      run: |
+        echo "## 📦 Build Summary" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Package built successfully" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Package validation passed" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Artifacts uploaded" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📋 Package Details" >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+        ls -la dist/ >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

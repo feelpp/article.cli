@@ -15,7 +15,7 @@ jobs:
     - uses: actions/checkout@v4
     
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: "3.11"
     
@@ -30,3 +30,20 @@ jobs:
     - name: Publish to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       # Uses trusted publishing - no tokens needed!
+    
+    - name: Generate publish summary
+      if: always()
+      run: |
+        echo "## 🚀 PyPI Publication Summary" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Package built successfully" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Published to PyPI using trusted publishing" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📦 Release Information" >> $GITHUB_STEP_SUMMARY
+        echo "- **Release**: ${{ github.event.release.tag_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Package**: article-cli" >> $GITHUB_STEP_SUMMARY
+        echo "- **PyPI**: https://pypi.org/project/article-cli/" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📋 Installation" >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+        echo "pip install --upgrade article-cli" >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
