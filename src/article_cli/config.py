@@ -169,6 +169,9 @@ class Config:
                 "latex", "clean_extensions", default_extensions
             ),
             "build_dir": self.get("latex", "build_dir", "."),
+            "engine": self.get("latex", "engine", "latexmk"),
+            "shell_escape": self.get("latex", "shell_escape", False),
+            "timeout": self.get("latex", "timeout", 300),
         }
 
     def validate_zotero_config(
@@ -261,6 +264,15 @@ clean_extensions = [
 
 # Build directory (relative to project root)
 build_dir = "."
+
+# Default LaTeX engine
+engine = "latexmk"  # Options: "latexmk", "pdflatex"
+
+# Enable shell escape by default
+shell_escape = false
+
+# Compilation timeout in seconds
+timeout = 300
 """
 
         try:

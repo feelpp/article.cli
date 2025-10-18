@@ -8,7 +8,7 @@ This package provides tools for:
 - Git hooks setup
 """
 
-__version__ = "1.0.3"
+__version__ = "1.1.0"
 __author__ = "Christophe Prud'homme"
 __email__ = "prudhomm@cemosis.fr"
 
@@ -16,5 +16,7 @@ from .cli import main
 from .config import Config
 from .zotero import ZoteroBibTexUpdater
 from .git_manager import GitManager
+from .repository_setup import RepositorySetup
+from .latex_compiler import LaTeXCompiler
 
-__all__ = ["main", "Config", "ZoteroBibTexUpdater", "GitManager"]
+__all__ = ["main", "Config", "ZoteroBibTexUpdater", "GitManager", "RepositorySetup", "LaTeXCompiler"]

@@ -13,6 +13,7 @@ from . import __version__
 from .config import Config
 from .zotero import ZoteroBibTexUpdater, print_error, print_info
 from .git_manager import GitManager
+from .repository_setup import RepositorySetup
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -23,8 +24,13 @@ def create_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
+  %(prog)s init --title "My Article" --authors "John Doe,Jane Smith"
   %(prog)s setup                          # Setup git hooks
   %(prog)s clean                          # Clean build files
+  %(prog)s compile main.tex               # Compile with latexmk
+  %(prog)s compile --engine pdflatex      # Compile with pdflatex
+  %(prog)s compile --shell-escape         # Enable shell escape
+  %(prog)s compile --watch                # Watch and auto-recompile
   %(prog)s create v1.0.0                  # Create release v1.0.0
   %(prog)s list --count 10                # List 10 recent releases
   %(prog)s delete v1.0.0                  # Delete release
@@ -46,11 +52,76 @@ Environment variables:
 
     subparsers = parser.add_subparsers(dest="command", help="Command to execute")
 
+    # Init command
+    init_parser = subparsers.add_parser(
+        "init", help="Initialize repository with workflows and configuration"
+    )
+    init_parser.add_argument(
+        "--title", required=True, help="Article title"
+    )
+    init_parser.add_argument(
+        "--authors",
+        required=True,
+        help='Comma-separated list of authors (e.g., "John Doe,Jane Smith")',
+    )
+    init_parser.add_argument(
+        "--group-id",
+        default="4678293",
+        help="Zotero group ID (default: 4678293 for article.template)",
+    )
+    init_parser.add_argument(
+        "--tex-file",
+        help="Main .tex file (auto-detected if not specified)",
+    )
+    init_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite existing files",
+    )
+
     # Setup command
     subparsers.add_parser("setup", help="Setup git hooks for gitinfo2")
 
     # Clean command
     subparsers.add_parser("clean", help="Clean LaTeX build files")
+
+    # Compile command
+    compile_parser = subparsers.add_parser("compile", help="Compile LaTeX document using latexmk")
+    compile_parser.add_argument(
+        "tex_file", 
+        nargs="?", 
+        help="LaTeX file to compile (auto-detected if not specified)"
+    )
+    compile_parser.add_argument(
+        "--engine", 
+        choices=["latexmk", "pdflatex"], 
+        default="latexmk",
+        help="LaTeX engine to use (default: latexmk)"
+    )
+    compile_parser.add_argument(
+        "--shell-escape", 
+        action="store_true", 
+        help="Enable shell escape (for code highlighting, etc.)"
+    )
+    compile_parser.add_argument(
+        "--clean-first", 
+        action="store_true", 
+        help="Clean build files before compilation"
+    )
+    compile_parser.add_argument(
+        "--clean-after", 
+        action="store_true", 
+        help="Clean build files after compilation"
+    )
+    compile_parser.add_argument(
+        "--watch", 
+        action="store_true", 
+        help="Watch for changes and recompile automatically"
+    )
+    compile_parser.add_argument(
+        "--output-dir", 
+        help="Output directory for compiled files"
+    )
 
     # Create command
     create_parser = subparsers.add_parser("create", help="Create a new release")
@@ -102,6 +173,29 @@ Environment variables:
     return parser
 
 
+def handle_init_command(args: argparse.Namespace, config: Config) -> int:
+    """Handle the init command"""
+    try:
+        # Parse comma-separated authors
+        authors = [a.strip() for a in args.authors.split(",")]
+
+        repo_setup = RepositorySetup()
+        return (
+            0
+            if repo_setup.init_repository(
+                title=args.title,
+                authors=authors,
+                group_id=args.group_id,
+                force=args.force,
+                main_tex_file=args.tex_file,
+            )
+            else 1
+        )
+    except Exception as e:
+        print_error(f"Failed to initialize repository: {e}")
+        return 1
+
+
 def handle_setup_command(config: Config) -> int:
     """Handle the setup command"""
     try:
@@ -123,6 +217,78 @@ def handle_clean_command(config: Config) -> int:
     except ValueError as e:
         print_error(str(e))
         return 1
+
+
+def handle_compile_command(args: argparse.Namespace, config: Config) -> int:
+    """Handle the compile command"""
+    try:
+        from .latex_compiler import LaTeXCompiler
+        
+        # Auto-detect tex file if not provided
+        tex_file = args.tex_file
+        if not tex_file:
+            tex_file = _auto_detect_tex_file()
+            if not tex_file:
+                print_error("No .tex file specified and none found in current directory")
+                return 1
+        
+        # Validate tex file exists
+        tex_path = Path(tex_file)
+        if not tex_path.exists():
+            print_error(f"LaTeX file not found: {tex_file}")
+            return 1
+        
+        compiler = LaTeXCompiler(config)
+        
+        # Clean before compilation if requested
+        if args.clean_first:
+            print_info("Cleaning build files before compilation...")
+            git_manager = GitManager()
+            latex_config = config.get_latex_config()
+            git_manager.clean_latex_files(latex_config["clean_extensions"])
+        
+        # Compile the document
+        success = compiler.compile(
+            tex_file=tex_file,
+            engine=args.engine,
+            shell_escape=args.shell_escape,
+            output_dir=args.output_dir,
+            watch=args.watch
+        )
+        
+        # Clean after compilation if requested
+        if args.clean_after and success:
+            print_info("Cleaning build files after compilation...")
+            git_manager = GitManager()
+            latex_config = config.get_latex_config()
+            git_manager.clean_latex_files(latex_config["clean_extensions"])
+        
+        return 0 if success else 1
+        
+    except Exception as e:
+        print_error(f"Compilation failed: {e}")
+        return 1
+
+
+def _auto_detect_tex_file() -> Optional[str]:
+    """Auto-detect main .tex file in current directory"""
+    current_dir = Path.cwd()
+    tex_files = list(current_dir.glob("*.tex"))
+    
+    if not tex_files:
+        return None
+    
+    if len(tex_files) == 1:
+        return tex_files[0].name
+    
+    # Multiple .tex files - prefer common patterns
+    for pattern in ["main.tex", "article.tex", f"{current_dir.name}.tex"]:
+        if (current_dir / pattern).exists():
+            return pattern
+    
+    # Return first .tex file found
+    print_info(f"Multiple .tex files found, using: {tex_files[0].name}")
+    return tex_files[0].name
 
 
 def handle_create_command(args: argparse.Namespace, config: Config) -> int:
@@ -235,6 +401,9 @@ def handle_config_command(args: argparse.Namespace, config: Config) -> int:
                 f"  Clean Extensions: {len(latex_config['clean_extensions'])} extensions"
             )
             print(f"  Build Directory: {latex_config['build_dir']}")
+            print(f"  Engine: {latex_config['engine']}")
+            print(f"  Shell Escape: {latex_config['shell_escape']}")
+            print(f"  Timeout: {latex_config['timeout']}s")
 
             return 0
         except Exception as e:
@@ -271,11 +440,17 @@ def main(argv: Optional[list] = None) -> int:
 
     # Route to appropriate command handler
     try:
-        if args.command == "setup":
+        if args.command == "init":
+            return handle_init_command(args, config)
+
+        elif args.command == "setup":
             return handle_setup_command(config)
 
         elif args.command == "clean":
             return handle_clean_command(config)
+
+        elif args.command == "compile":
+            return handle_compile_command(args, config)
 
         elif args.command == "create":
             return handle_create_command(args, config)

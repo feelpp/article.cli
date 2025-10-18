@@ -5,6 +5,66 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [1.1.0] - 2025-10-18
+
+### Added
+- **New `init` command**: Complete repository initialization for LaTeX article projects
+  - Creates GitHub Actions workflows for automated PDF compilation and releases
+  - Generates pyproject.toml with article-cli configuration
+  - Creates README.md with project documentation and usage instructions
+  - Sets up .gitignore with LaTeX-specific entries
+  - Auto-detects main .tex file or allows manual specification
+  - Supports custom Zotero group IDs and multiple authors
+- **New `compile` command**: LaTeX document compilation with various engines and options
+  - `article-cli compile main.tex` - Compile with latexmk (default)
+  - `article-cli compile --engine pdflatex` - Use pdflatex engine
+  - `article-cli compile --shell-escape` - Enable shell escape for code highlighting
+  - `article-cli compile --watch` - Watch for changes and auto-recompile
+  - `article-cli compile --clean-first --clean-after` - Auto-clean build files
+  - Auto-detection of main .tex file if not specified
+  - Support for custom output directories
+  - Real-time output streaming in watch mode
+  - Dependency checking for LaTeX tools
+- New `RepositorySetup` class for repository scaffolding
+- New `LaTeXCompiler` class with engine abstraction
+- Comprehensive workflow template based on article.dirac best practices
+- Project configuration templates with embedded article-cli settings
+- VS Code configuration files in `init` command
+  - `.vscode/settings.json` with LaTeX Workshop configuration
+  - `.vscode/ltex.dictionary.en-US.txt` with common LaTeX/math terms
+  - `.vscode/ltex.hiddenFalsePositives.en-US.txt` for spell checking
+- LaTeX configuration options in config files:
+  - `engine` - Default compilation engine (latexmk/pdflatex)
+  - `shell_escape` - Enable shell escape by default
+  - `timeout` - Compilation timeout in seconds
+
+### Changed
+- Enhanced CLI help text with init and compile command examples
+- Updated documentation to reflect new commands
+- Improved repository structure guidance
+- Configuration system now supports LaTeX compilation settings
+- Config display shows new LaTeX compilation options
+- Auto-build on save enabled by default in VS Code
+- SyncTeX support configured
+
+### Features
+- **One-command setup**: `article-cli init --title "Article Title" --authors "John Doe,Jane Smith"`
+- **Automatic detection**: Finds main .tex file automatically
+- **Template-based**: Uses proven templates from article.dirac
+- **Configurable**: Supports custom group IDs and force overwrite
+- **Complete CI/CD**: Includes full GitHub Actions pipeline with:
+  - Automated PDF compilation on push/PR
+  - GitHub releases on version tags
+  - Artifact upload and verification
+  - Zotero bibliography integration
+- **LaTeX compilation**: Command-line arguments mimic LaTeX Workshop configuration
+- **Multi-pass compilation**: Multiple compilation passes for cross-references (pdflatex)
+- **Bibliography processing**: Automatic bibliography processing (bibtex/biber)
+- **Watch mode**: latexmk continuous preview with real-time output
+- **Error handling**: Comprehensive error handling and user feedback
+
 ## [1.0.3] - 2024-12-19
 
 ### Added
@@ -85,6 +145,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `article-cli config show` - Show current configuration
 - `article-cli config create` - Create sample configuration
 
-[1.0.3]: https://github.com/feelpp/article.cli/releases/tag/v1.0.3[1.0.2]: https://github.com/feelpp/article.cli/releases/tag/v1.0.2
+[1.1.0]: https://github.com/feelpp/article.cli/releases/tag/v1.1.0
+[1.0.3]: https://github.com/feelpp/article.cli/releases/tag/v1.0.3
+[1.0.2]: https://github.com/feelpp/article.cli/releases/tag/v1.0.2
 [1.0.1]: https://github.com/feelpp/article.cli/releases/tag/v1.0.1
 [1.0.0]: https://github.com/feelpp/article.cli/releases/tag/v1.0.0
