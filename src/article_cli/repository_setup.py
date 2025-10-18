@@ -8,10 +8,8 @@ Provides functionality to initialize LaTeX article repositories with:
 - Git hooks and configuration
 """
 
-import os
-import shutil
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from .zotero import print_error, print_info, print_success
 
@@ -163,9 +161,7 @@ class RepositorySetup:
             directory.mkdir(parents=True, exist_ok=True)
             print_info(f"Created directory: {directory.relative_to(self.repo_path)}")
 
-    def _create_workflow(
-        self, project_name: str, tex_file: str, force: bool
-    ) -> bool:
+    def _create_workflow(self, project_name: str, tex_file: str, force: bool) -> bool:
         """
         Create GitHub Actions workflow file
 
@@ -180,7 +176,9 @@ class RepositorySetup:
         workflow_path = self.repo_path / ".github" / "workflows" / "latex.yml"
 
         if workflow_path.exists() and not force:
-            print_info(f"Workflow already exists: {workflow_path.name} (use --force to overwrite)")
+            print_info(
+                f"Workflow already exists: {workflow_path.name} (use --force to overwrite)"
+            )
             return True
 
         # Extract base name (without .tex extension)
@@ -203,7 +201,7 @@ class RepositorySetup:
         Returns:
             Workflow YAML content
         """
-        return f'''name: Compile LaTeX and Release PDF
+        return f"""name: Compile LaTeX and Release PDF
 
 # This workflow uses article-cli for:
 # - Git hooks setup (article-cli setup)
@@ -639,7 +637,7 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "Please check the workflow logs for details." >> $GITHUB_STEP_SUMMARY
           fi
-'''
+"""
 
     def _create_pyproject(
         self,
@@ -665,15 +663,13 @@ jobs:
         pyproject_path = self.repo_path / "pyproject.toml"
 
         if pyproject_path.exists() and not force:
-            print_info(
-                f"pyproject.toml already exists (use --force to overwrite)"
-            )
+            print_info(f"pyproject.toml already exists (use --force to overwrite)")
             return True
 
         # Format authors for TOML
         authors_toml = ",\n    ".join([f'{{name = "{author}"}}' for author in authors])
 
-        pyproject_content = f'''# Article Repository Dependency Management
+        pyproject_content = f"""# Article Repository Dependency Management
 # This file manages dependencies for the LaTeX article project
 
 [project]
@@ -709,7 +705,7 @@ clean_extensions = [
     ".fls", ".synctex.gz", ".toc", ".fdb_latexmk",
     ".idx", ".ilg", ".ind", ".lof", ".lot"
 ]
-'''
+"""
 
         pyproject_path.write_text(pyproject_content)
         print_success(f"Created: {pyproject_path.relative_to(self.repo_path)}")
@@ -744,7 +740,7 @@ clean_extensions = [
 
         authors_list = "\n".join([f"- {author}" for author in authors])
 
-        readme_content = f'''# {title}
+        readme_content = f"""# {title}
 
 ## Authors
 
@@ -867,7 +863,7 @@ article-cli config show
   url = {{https://github.com/feelpp/{project_name}}}
 }}
 ```
-'''
+"""
 
         readme_path.write_text(readme_content)
         print_success(f"Created: {readme_path.relative_to(self.repo_path)}")
@@ -958,10 +954,12 @@ references.bib.backup
         vscode_settings_path = self.repo_path / ".vscode" / "settings.json"
 
         if vscode_settings_path.exists() and not force:
-            print_info(".vscode/settings.json already exists (use --force to overwrite)")
+            print_info(
+                ".vscode/settings.json already exists (use --force to overwrite)"
+            )
             return True
 
-        settings_content = '''{
+        settings_content = """{
     "latex-workshop.latex.recipes": [
         {
             "name": "latexmk-pdf",
@@ -1023,7 +1021,7 @@ references.bib.backup
     "ltex.enabled": true,
     "ltex.language": "en-US"
 }
-'''
+"""
 
         vscode_settings_path.write_text(settings_content)
         print_success(f"Created: {vscode_settings_path.relative_to(self.repo_path)}")
@@ -1059,7 +1057,9 @@ parametrical
             print_info(f"Created: {dictionary_path.relative_to(self.repo_path)}")
 
         # Hidden false positives file (empty initially)
-        false_positives_path = self.repo_path / ".vscode" / "ltex.hiddenFalsePositives.en-US.txt"
+        false_positives_path = (
+            self.repo_path / ".vscode" / "ltex.hiddenFalsePositives.en-US.txt"
+        )
         if not false_positives_path.exists() or force:
             false_positives_path.write_text("")
             print_info(f"Created: {false_positives_path.relative_to(self.repo_path)}")
@@ -1083,7 +1083,7 @@ parametrical
             return True
 
         # gitinfo2 post-commit hook
-        post_commit_content = '''#!/bin/sh
+        post_commit_content = """#!/bin/sh
 # Copyright 2015 Brent Longborough
 # Part of gitinfo2 package Version 2
 # Release 2.0.7 2015-11-22
@@ -1114,15 +1114,18 @@ git --no-pager log -1 --date=short --decorate=short \\
         firsttagdescribe={$FIRSTTAG},
         reltag={$RELTAG}
     ]{gitexinfo}" HEAD > .git/gitHeadInfo.gin
-'''
+"""
 
         post_commit_path.write_text(post_commit_content)
-        
+
         # Make the hook executable
         import stat
-        post_commit_path.chmod(post_commit_path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
-        
+
+        post_commit_path.chmod(
+            post_commit_path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
+        )
+
         print_success(f"Created: {post_commit_path.relative_to(self.repo_path)}")
         print_info("Made post-commit hook executable")
-        
+
         return True

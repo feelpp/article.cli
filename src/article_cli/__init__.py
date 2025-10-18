@@ -19,4 +19,11 @@ from .git_manager import GitManager
 from .repository_setup import RepositorySetup
 from .latex_compiler import LaTeXCompiler
 
-__all__ = ["main", "Config", "ZoteroBibTexUpdater", "GitManager", "RepositorySetup", "LaTeXCompiler"]
+__all__ = [
+    "main",
+    "Config",
+    "ZoteroBibTexUpdater",
+    "GitManager",
+    "RepositorySetup",
+    "LaTeXCompiler",
+]

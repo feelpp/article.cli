@@ -5,9 +5,7 @@ Provides compilation functionality that mimics LaTeX Workshop configuration
 with support for latexmk and pdflatex engines.
 """
 
-import os
 import subprocess
-import sys
 import time
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -103,6 +101,8 @@ class LaTeXCompiler:
             # Stream output in real time
             try:
                 while True:
+                    if process.stdout is None:
+                        break
                     output = process.stdout.readline()
                     if output == "" and process.poll() is not None:
                         break
@@ -178,7 +178,7 @@ class LaTeXCompiler:
         try:
             # Run multiple passes for cross-references, bibliography, etc.
             passes = ["First pass", "Second pass", "Third pass"]
-            
+
             for i, pass_name in enumerate(passes):
                 print_info(f"{pass_name}...")
                 result = subprocess.run(
@@ -237,12 +237,14 @@ class LaTeXCompiler:
         # Core options (from LaTeX Workshop)
         if shell_escape:
             cmd.append("--shell-escape")
-        
-        cmd.extend([
-            "-pdf",
-            "-interaction=nonstopmode",
-            "-synctex=1",
-        ])
+
+        cmd.extend(
+            [
+                "-pdf",
+                "-interaction=nonstopmode",
+                "-synctex=1",
+            ]
+        )
 
         if output_dir:
             cmd.extend(["-outdir", output_dir])
@@ -264,11 +266,13 @@ class LaTeXCompiler:
         if shell_escape:
             cmd.append("--shell-escape")
 
-        cmd.extend([
-            "-synctex=1",
-            "-interaction=nonstopmode",
-            "-file-line-error",
-        ])
+        cmd.extend(
+            [
+                "-synctex=1",
+                "-interaction=nonstopmode",
+                "-file-line-error",
+            ]
+        )
 
         if output_dir:
             cmd.extend(["-output-directory", output_dir])
@@ -282,7 +286,10 @@ class LaTeXCompiler:
         base_name = tex_path.stem
 
         # Check if bibliography is needed
-        if "citation undefined" in latex_output.lower() or "rerun" in latex_output.lower():
+        if (
+            "citation undefined" in latex_output.lower()
+            or "rerun" in latex_output.lower()
+        ):
             # Check for .aux file to determine if we need bibtex
             aux_file = tex_path.with_suffix(".aux")
             if aux_file.exists():
@@ -306,12 +313,12 @@ class LaTeXCompiler:
             size = pdf_path.stat().st_size
             size_mb = size / (1024 * 1024)
             print_info(f"PDF size: {size_mb:.2f} MB")
-            
+
             # Show modification time
             mtime = pdf_path.stat().st_mtime
             mtime_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(mtime))
             print_info(f"Generated: {mtime_str}")
-            
+
         except Exception:
             pass  # Silently ignore errors getting file info
 
@@ -346,14 +353,16 @@ class LaTeXCompiler:
     def print_dependency_status(self) -> None:
         """Print status of LaTeX dependencies"""
         print_info("Checking LaTeX dependencies...")
-        
+
         deps = self.check_dependencies()
-        
+
         for tool, available in deps.items():
             status = "✅ Available" if available else "❌ Not found"
             print(f"  {tool}: {status}")
-        
+
         if not all(deps.values()):
-            print_info("\nSome LaTeX tools are missing. Install a LaTeX distribution like TeX Live.")
+            print_info(
+                "\nSome LaTeX tools are missing. Install a LaTeX distribution like TeX Live."
+            )
             print_info("On macOS: brew install --cask mactex")
             print_info("On Ubuntu: sudo apt-get install texlive-full")

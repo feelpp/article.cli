@@ -56,9 +56,7 @@ Environment variables:
     init_parser = subparsers.add_parser(
         "init", help="Initialize repository with workflows and configuration"
     )
-    init_parser.add_argument(
-        "--title", required=True, help="Article title"
-    )
+    init_parser.add_argument("--title", required=True, help="Article title")
     init_parser.add_argument(
         "--authors",
         required=True,
@@ -86,41 +84,40 @@ Environment variables:
     subparsers.add_parser("clean", help="Clean LaTeX build files")
 
     # Compile command
-    compile_parser = subparsers.add_parser("compile", help="Compile LaTeX document using latexmk")
-    compile_parser.add_argument(
-        "tex_file", 
-        nargs="?", 
-        help="LaTeX file to compile (auto-detected if not specified)"
+    compile_parser = subparsers.add_parser(
+        "compile", help="Compile LaTeX document using latexmk"
     )
     compile_parser.add_argument(
-        "--engine", 
-        choices=["latexmk", "pdflatex"], 
+        "tex_file",
+        nargs="?",
+        help="LaTeX file to compile (auto-detected if not specified)",
+    )
+    compile_parser.add_argument(
+        "--engine",
+        choices=["latexmk", "pdflatex"],
         default="latexmk",
-        help="LaTeX engine to use (default: latexmk)"
+        help="LaTeX engine to use (default: latexmk)",
     )
     compile_parser.add_argument(
-        "--shell-escape", 
-        action="store_true", 
-        help="Enable shell escape (for code highlighting, etc.)"
+        "--shell-escape",
+        action="store_true",
+        help="Enable shell escape (for code highlighting, etc.)",
     )
     compile_parser.add_argument(
-        "--clean-first", 
-        action="store_true", 
-        help="Clean build files before compilation"
+        "--clean-first",
+        action="store_true",
+        help="Clean build files before compilation",
     )
     compile_parser.add_argument(
-        "--clean-after", 
-        action="store_true", 
-        help="Clean build files after compilation"
+        "--clean-after", action="store_true", help="Clean build files after compilation"
     )
     compile_parser.add_argument(
-        "--watch", 
-        action="store_true", 
-        help="Watch for changes and recompile automatically"
+        "--watch",
+        action="store_true",
+        help="Watch for changes and recompile automatically",
     )
     compile_parser.add_argument(
-        "--output-dir", 
-        help="Output directory for compiled files"
+        "--output-dir", help="Output directory for compiled files"
     )
 
     # Create command
@@ -223,48 +220,50 @@ def handle_compile_command(args: argparse.Namespace, config: Config) -> int:
     """Handle the compile command"""
     try:
         from .latex_compiler import LaTeXCompiler
-        
+
         # Auto-detect tex file if not provided
         tex_file = args.tex_file
         if not tex_file:
             tex_file = _auto_detect_tex_file()
             if not tex_file:
-                print_error("No .tex file specified and none found in current directory")
+                print_error(
+                    "No .tex file specified and none found in current directory"
+                )
                 return 1
-        
+
         # Validate tex file exists
         tex_path = Path(tex_file)
         if not tex_path.exists():
             print_error(f"LaTeX file not found: {tex_file}")
             return 1
-        
+
         compiler = LaTeXCompiler(config)
-        
+
         # Clean before compilation if requested
         if args.clean_first:
             print_info("Cleaning build files before compilation...")
             git_manager = GitManager()
             latex_config = config.get_latex_config()
             git_manager.clean_latex_files(latex_config["clean_extensions"])
-        
+
         # Compile the document
         success = compiler.compile(
             tex_file=tex_file,
             engine=args.engine,
             shell_escape=args.shell_escape,
             output_dir=args.output_dir,
-            watch=args.watch
+            watch=args.watch,
         )
-        
+
         # Clean after compilation if requested
         if args.clean_after and success:
             print_info("Cleaning build files after compilation...")
             git_manager = GitManager()
             latex_config = config.get_latex_config()
             git_manager.clean_latex_files(latex_config["clean_extensions"])
-        
+
         return 0 if success else 1
-        
+
     except Exception as e:
         print_error(f"Compilation failed: {e}")
         return 1
@@ -274,18 +273,18 @@ def _auto_detect_tex_file() -> Optional[str]:
     """Auto-detect main .tex file in current directory"""
     current_dir = Path.cwd()
     tex_files = list(current_dir.glob("*.tex"))
-    
+
     if not tex_files:
         return None
-    
+
     if len(tex_files) == 1:
         return tex_files[0].name
-    
+
     # Multiple .tex files - prefer common patterns
     for pattern in ["main.tex", "article.tex", f"{current_dir.name}.tex"]:
         if (current_dir / pattern).exists():
             return pattern
-    
+
     # Return first .tex file found
     print_info(f"Multiple .tex files found, using: {tex_files[0].name}")
     return tex_files[0].name
