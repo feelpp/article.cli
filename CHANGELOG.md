@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2025-10-18
+
+### Fixed
+- Code formatting issues for CI compliance
+- Remove unused imports in latex_compiler.py and repository_setup.py
+- Add proper None check for process.stdout in latex_compiler.py
+- Update .flake8 configuration to handle YAML template formatting
+- All linting checks now pass (black, flake8, mypy)
+
 ## [1.1.0] - 2025-10-18
 
 ### Added
@@ -145,6 +154,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `article-cli config show` - Show current configuration
 - `article-cli config create` - Create sample configuration
 
+[1.1.1]: https://github.com/feelpp/article.cli/releases/tag/v1.1.1
 [1.1.0]: https://github.com/feelpp/article.cli/releases/tag/v1.1.0
 [1.0.3]: https://github.com/feelpp/article.cli/releases/tag/v1.0.3
 [1.0.2]: https://github.com/feelpp/article.cli/releases/tag/v1.0.2
