@@ -5,10 +5,10 @@ This package provides tools for:
 - Git release management with gitinfo2 support
 - Zotero bibliography synchronization
 - LaTeX build file cleanup
-- Git hooks setup
+    - Git hooks setup
 """
 
-__version__ = "1.1.1"
+__version__ = "1.2.0"
 __author__ = "Christophe Prud'homme"
 __email__ = "prudhomm@cemosis.fr"
 

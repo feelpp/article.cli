@@ -45,23 +45,24 @@ class RepositorySetup:
         - .vscode/settings.json with LaTeX Workshop configuration
         - LTeX dictionary files for spell checking
         - hooks/post-commit for gitinfo2 integration
+        - main.tex if no .tex file exists
 
         Args:
             title: Article title
             authors: List of author names
             group_id: Zotero group ID
             force: Overwrite existing files if True
-            main_tex_file: Main .tex filename (auto-detected if None)
+            main_tex_file: Main .tex filename (auto-detected if None, created if missing)
 
         Returns:
             True if successful, False otherwise
         """
         print_info(f"Initializing repository at: {self.repo_path}")
 
-        # Detect or validate main .tex file
-        tex_file = self._detect_tex_file(main_tex_file)
+        # Detect or validate main .tex file, create if missing
+        tex_file = self._detect_or_create_tex_file(main_tex_file, title, authors, force)
         if not tex_file:
-            print_error("No main .tex file found or specified")
+            print_error("Failed to detect or create main .tex file")
             return False
 
         project_name = self.repo_path.name
@@ -111,27 +112,39 @@ class RepositorySetup:
             print_error(f"Failed to initialize repository: {e}")
             return False
 
-    def _detect_tex_file(self, specified: Optional[str]) -> Optional[str]:
+    def _detect_or_create_tex_file(
+        self, specified: Optional[str], title: str, authors: List[str], force: bool
+    ) -> Optional[str]:
         """
-        Detect main .tex file in repository
+        Detect main .tex file in repository or create one if missing
 
         Args:
             specified: User-specified filename (takes priority)
+            title: Article title (for creating new .tex file)
+            authors: List of author names (for creating new .tex file)
+            force: Overwrite existing file if True
 
         Returns:
-            Main .tex filename or None if not found
+            Main .tex filename or None on failure
         """
         if specified:
             tex_path = self.repo_path / specified
             if tex_path.exists():
                 return specified
-            print_error(f"Specified .tex file not found: {specified}")
+            # Specified file doesn't exist - create it
+            if self._create_tex_file(specified, title, authors, force):
+                return specified
             return None
 
         # Auto-detect .tex files
         tex_files = list(self.repo_path.glob("*.tex"))
 
         if not tex_files:
+            # No .tex files found - create main.tex
+            default_name = "main.tex"
+            print_info(f"No .tex file found, creating {default_name}")
+            if self._create_tex_file(default_name, title, authors, force):
+                return default_name
             return None
 
         if len(tex_files) == 1:
@@ -148,6 +161,94 @@ class RepositorySetup:
             "(use --tex-file to specify different file)"
         )
         return tex_files[0].name
+
+    def _create_tex_file(
+        self, filename: str, title: str, authors: List[str], force: bool
+    ) -> bool:
+        """
+        Create a basic LaTeX article file
+
+        Args:
+            filename: Name of the .tex file to create
+            title: Article title
+            authors: List of author names
+            force: Overwrite if exists
+
+        Returns:
+            True if successful
+        """
+        tex_path = self.repo_path / filename
+
+        if tex_path.exists() and not force:
+            print_info(f"{filename} already exists (use --force to overwrite)")
+            return True
+
+        # Format authors for LaTeX
+        authors_latex = " \\and ".join(authors)
+
+        tex_content = f"""\\documentclass[a4paper,11pt]{{article}}
+
+% Essential packages
+\\usepackage[utf8]{{inputenc}}
+\\usepackage[T1]{{fontenc}}
+\\usepackage{{lmodern}}
+\\usepackage{{amsmath,amssymb,amsthm}}
+\\usepackage{{graphicx}}
+\\usepackage{{hyperref}}
+\\usepackage[margin=1in]{{geometry}}
+
+% Bibliography
+\\usepackage[style=numeric,sorting=none]{{biblatex}}
+\\addbibresource{{references.bib}}
+
+% Git version information
+\\usepackage{{gitinfo2}}
+
+% Title and authors
+\\title{{{title}}}
+\\author{{{authors_latex}}}
+\\date{{\\today}}
+
+\\begin{{document}}
+
+\\maketitle
+
+\\begin{{abstract}}
+    Your abstract goes here.
+\\end{{abstract}}
+
+\\section{{Introduction}}
+
+Your introduction goes here.
+
+\\section{{Methodology}}
+
+Your methodology goes here.
+
+\\section{{Results}}
+
+Your results go here.
+
+\\section{{Conclusion}}
+
+Your conclusion goes here.
+
+% Print bibliography
+\\printbibliography
+
+% Git information (optional - appears in footer)
+\\vfill
+\\hrule
+\\small
+\\noindent Git version: \\gitAbbrevHash{{}} (\\gitAuthorIsoDate) \\\\
+Branch: \\gitBranch
+
+\\end{{document}}
+"""
+
+        tex_path.write_text(tex_content)
+        print_success(f"Created: {tex_path.relative_to(self.repo_path)}")
+        return True
 
     def _create_directories(self) -> None:
         """Create necessary directory structure"""

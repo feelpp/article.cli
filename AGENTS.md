@@ -61,7 +61,7 @@ flake8 src/
 mypy src/
 
 # Local functionality test
-pip install -e .
+uv pip install -e .
 article-cli --version
 article-cli --help
 article-cli config show
@@ -169,13 +169,12 @@ gh release create v1.0.X --title "v1.0.X - Description" --notes "Release notes"
 ### Environment Setup:
 
 ```bash
-# Fresh development environment
+# Fresh development environment with uv
 cd /Users/prudhomm/Devel/Articles/article.cli
-python3 -m venv venv
-source venv/bin/activate
-pip install --upgrade pip
-pip install -e .
-pip install black flake8 mypy types-requests pytest
+uv venv
+source .venv/bin/activate
+uv pip install -e .
+uv pip install black flake8 mypy types-requests pytest
 ```
 
 ## 📚 Documentation Locations
@@ -230,6 +229,12 @@ gh release create v1.0.X --title "Release v1.0.X" --notes "Release notes"
 **Solution**: Always update BOTH files:
 - `pyproject.toml` - Line with `version = "1.0.X"`
 - `src/article_cli/__init__.py` - Line with `__version__ = "1.0.X"`
+
+**Verify locally**:
+```bash
+uv pip install -e .
+article-cli --version
+```
 
 ---
 

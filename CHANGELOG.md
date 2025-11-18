@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2025-11-18
+
+### Added
+- Init command now creates main.tex file if no .tex file exists in repository
+- Support for initializing completely empty repositories
+
+### Changed
+- Init command no longer requires pre-existing .tex file
+- Init command respects existing files (won't overwrite without --force flag)
+- Improved empty repository handling for better user experience
+
 ## [1.1.1] - 2025-10-18
 
 ### Fixed
@@ -154,6 +165,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `article-cli config show` - Show current configuration
 - `article-cli config create` - Create sample configuration
 
+[1.2.0]: https://github.com/feelpp/article.cli/releases/tag/v1.2.0
 [1.1.1]: https://github.com/feelpp/article.cli/releases/tag/v1.1.1
 [1.1.0]: https://github.com/feelpp/article.cli/releases/tag/v1.1.0
 [1.0.3]: https://github.com/feelpp/article.cli/releases/tag/v1.0.3
