@@ -107,16 +107,15 @@ class TestFontInstaller:
         assert len(files) == 1
         assert files[0].name == "font1.ttf"
 
-    @patch("article_cli.fonts.urlopen")
-    def test_download_file_success(self, mock_urlopen, tmp_path):
+    @patch("article_cli.fonts.requests.get")
+    def test_download_file_success(self, mock_get, tmp_path):
         """Test successful file download"""
         # Create mock response
         mock_response = MagicMock()
         mock_response.headers.get.return_value = "1000"
-        mock_response.read.side_effect = [b"test content", b""]
-        mock_response.__enter__ = MagicMock(return_value=mock_response)
-        mock_response.__exit__ = MagicMock(return_value=False)
-        mock_urlopen.return_value = mock_response
+        mock_response.iter_content.return_value = [b"test content"]
+        mock_response.raise_for_status = MagicMock()
+        mock_get.return_value = mock_response
 
         installer = FontInstaller(fonts_dir=tmp_path / "fonts")
         dest = tmp_path / "test.zip"
@@ -228,10 +227,10 @@ class TestDefaultFontSources:
             assert "url" in source
             assert source["url"].startswith("http")
 
-    def test_default_sources_include_marianne(self):
-        """Test that Marianne font is included"""
+    def test_default_sources_include_roboto(self):
+        """Test that Roboto font is included"""
         names = [s["name"] for s in DEFAULT_FONT_SOURCES]
-        assert "Marianne" in names
+        assert "Roboto" in names
 
     def test_default_sources_include_roboto_mono(self):
         """Test that Roboto Mono font is included"""
