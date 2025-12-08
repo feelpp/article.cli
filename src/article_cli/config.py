@@ -174,6 +174,29 @@ class Config:
             "timeout": self.get("latex", "timeout", 300),
         }
 
+    def get_project_config(self) -> Dict[str, Any]:
+        """Get project-level configuration"""
+        return {
+            "project_type": self.get("project", "type", "article"),
+        }
+
+    def get_presentation_config(self) -> Dict[str, Any]:
+        """Get presentation-specific configuration (for Beamer)"""
+        return {
+            "theme": self.get("presentation", "theme", ""),
+            "aspect_ratio": self.get("presentation", "aspect_ratio", "169"),
+            "color_theme": self.get("presentation", "color_theme", ""),
+            "font_theme": self.get("presentation", "font_theme", ""),
+        }
+
+    def get_poster_config(self) -> Dict[str, Any]:
+        """Get poster-specific configuration"""
+        return {
+            "size": self.get("poster", "size", "a0"),
+            "orientation": self.get("poster", "orientation", "portrait"),
+            "columns": self.get("poster", "columns", 3),
+        }
+
     def validate_zotero_config(
         self, args: argparse.Namespace
     ) -> Dict[str, Optional[str]]:
@@ -275,6 +298,35 @@ shell_escape = false
 
 # Compilation timeout in seconds
 timeout = 300
+
+[project]
+# Project type: "article", "presentation", or "poster"
+type = "article"
+
+# Presentation-specific settings (only used when type = "presentation")
+[presentation]
+# Beamer theme (e.g., "numpex", "metropolis", "default")
+theme = ""
+
+# Aspect ratio: "169" (16:9), "43" (4:3), or "1610" (16:10)
+aspect_ratio = "169"
+
+# Optional: color theme (e.g., "crane", "dolphin")
+color_theme = ""
+
+# Optional: font theme (e.g., "professionalfonts")
+font_theme = ""
+
+# Poster-specific settings (only used when type = "poster")
+[poster]
+# Poster size: "a0", "a1", "a2", etc.
+size = "a0"
+
+# Orientation: "portrait" or "landscape"
+orientation = "portrait"
+
+# Number of columns
+columns = 3
 """
 
         try:

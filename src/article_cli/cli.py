@@ -76,6 +76,23 @@ Environment variables:
         action="store_true",
         help="Overwrite existing files",
     )
+    init_parser.add_argument(
+        "--type",
+        choices=["article", "presentation", "poster"],
+        default="article",
+        help="Project type (default: article). Use 'presentation' for Beamer slides.",
+    )
+    init_parser.add_argument(
+        "--theme",
+        default="",
+        help="Beamer theme for presentations (e.g., 'numpex', 'metropolis').",
+    )
+    init_parser.add_argument(
+        "--aspect-ratio",
+        choices=["169", "43", "1610"],
+        default="169",
+        help="Aspect ratio for presentations (default: 169 for 16:9).",
+    )
 
     # Setup command
     subparsers.add_parser("setup", help="Setup git hooks for gitinfo2")
@@ -185,6 +202,9 @@ def handle_init_command(args: argparse.Namespace, config: Config) -> int:
                 group_id=args.group_id,
                 force=args.force,
                 main_tex_file=args.tex_file,
+                project_type=args.type,
+                theme=args.theme,
+                aspect_ratio=args.aspect_ratio,
             )
             else 1
         )
