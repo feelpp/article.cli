@@ -36,6 +36,10 @@ class RepositorySetup:
         project_type: str = "article",
         theme: str = "",
         aspect_ratio: str = "169",
+        additional_documents: Optional[List[str]] = None,
+        output_dir: str = "",
+        fonts_dir: str = "",
+        install_fonts: bool = False,
     ) -> bool:
         """
         Initialize a complete LaTeX repository (article, presentation, or poster)
@@ -59,6 +63,10 @@ class RepositorySetup:
             project_type: Type of project ("article", "presentation", "poster")
             theme: Beamer theme for presentations (e.g., "numpex", "metropolis")
             aspect_ratio: Aspect ratio for presentations ("169", "43", "1610")
+            additional_documents: List of additional .tex files to compile (e.g., ["poster.tex"])
+            output_dir: Output directory for compiled files (e.g., "build")
+            fonts_dir: Directory containing custom fonts for XeLaTeX
+            install_fonts: Whether to install custom fonts in CI
 
         Returns:
             True if successful, False otherwise
@@ -81,13 +89,28 @@ class RepositorySetup:
         print_info(f"Authors: {', '.join(authors)}")
         if project_type == "presentation" and theme:
             print_info(f"Beamer theme: {theme}")
+        if additional_documents:
+            print_info(f"Additional documents: {', '.join(additional_documents)}")
+        if output_dir:
+            print_info(f"Output directory: {output_dir}")
+        if fonts_dir:
+            print_info(f"Fonts directory: {fonts_dir}")
 
         try:
             # Create directory structure
             self._create_directories()
 
             # Create GitHub Actions workflows
-            if not self._create_workflow(project_name, tex_file, force, project_type):
+            if not self._create_workflow(
+                project_name,
+                tex_file,
+                force,
+                project_type,
+                additional_documents,
+                output_dir,
+                fonts_dir,
+                install_fonts,
+            ):
                 return False
 
             # Create pyproject.toml
@@ -100,6 +123,10 @@ class RepositorySetup:
                 project_type,
                 theme,
                 aspect_ratio,
+                additional_documents,
+                output_dir,
+                fonts_dir,
+                install_fonts,
             ):
                 return False
 
@@ -471,6 +498,10 @@ Branch: \\gitBranch
         tex_file: str,
         force: bool,
         project_type: str = "article",
+        additional_documents: Optional[List[str]] = None,
+        output_dir: str = "",
+        fonts_dir: str = "",
+        install_fonts: bool = False,
     ) -> bool:
         """
         Create GitHub Actions workflow file
@@ -480,7 +511,10 @@ Branch: \\gitBranch
             tex_file: Main .tex filename
             force: Overwrite if exists
             project_type: Type of project for workflow customization
-            force: Overwrite if exists
+            additional_documents: List of additional .tex files to compile
+            output_dir: Output directory for compiled files (e.g., "build")
+            fonts_dir: Directory containing custom fonts
+            install_fonts: Whether to install fonts in CI
 
         Returns:
             True if successful
@@ -496,29 +530,141 @@ Branch: \\gitBranch
         # Extract base name (without .tex extension)
         tex_base = tex_file.replace(".tex", "")
 
-        workflow_content = self._get_workflow_template(project_name, tex_base)
+        workflow_content = self._get_workflow_template(
+            project_name,
+            tex_base,
+            project_type,
+            additional_documents or [],
+            output_dir,
+            fonts_dir,
+            install_fonts,
+        )
 
         workflow_path.write_text(workflow_content)
         print_success(f"Created workflow: {workflow_path.relative_to(self.repo_path)}")
         return True
 
-    def _get_workflow_template(self, project_name: str, tex_base: str) -> str:
+    def _get_workflow_template(
+        self,
+        project_name: str,
+        tex_base: str,
+        project_type: str = "article",
+        additional_documents: Optional[List[str]] = None,
+        output_dir: str = "",
+        fonts_dir: str = "",
+        install_fonts: bool = False,
+    ) -> str:
         """
         Get GitHub Actions workflow template
 
         Args:
             project_name: Name of the project
             tex_base: Base name of .tex file (without extension)
+            project_type: Type of project ("article", "presentation", "poster")
+            additional_documents: List of additional .tex files to compile
+            output_dir: Output directory for compiled files
+            fonts_dir: Directory containing custom fonts
+            install_fonts: Whether to install fonts in CI
 
         Returns:
             Workflow YAML content
         """
+        additional_documents = additional_documents or []
+
+        # Determine LaTeX engine based on project type
+        use_xelatex = project_type in ["presentation", "poster"]
+        latexmk_args = "-xelatex" if use_xelatex else "-pdf"
+
+        # Build output directory arguments
+        outdir_arg = f"-outdir={output_dir}" if output_dir else ""
+        pdf_location = f"{output_dir}/" if output_dir else ""
+
+        # Build output directory echo line (avoid backslash issues in f-strings)
+        output_dir_echo = (
+            f'echo "- **Output Directory**: `{output_dir}`" >> $GITHUB_STEP_SUMMARY'
+            if output_dir
+            else ""
+        )
+
+        # Build font installation step (only for presentations with custom fonts)
+        font_install_step = ""
+        if install_fonts and fonts_dir:
+            # Build strings separately to avoid backslash issues in f-strings
+            backtick = "`"
+            triple_backtick = "```"
+            find_cmd = (
+                "find "
+                + fonts_dir
+                + ' -type f \\( -name "*.ttf" -o -name "*.otf" -o -name "*.woff" -o -name "*.woff2" \\) -exec cp {} ~/.local/share/fonts/ \\;'
+            )
+            font_install_step = f"""
+      - name: Install custom fonts
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🔤 Font Installation" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Create user fonts directory
+          mkdir -p ~/.local/share/fonts
+          
+          # Copy fonts from repository
+          if [ -d "{fonts_dir}" ]; then
+            {find_cmd}
+            
+            # Update font cache
+            fc-cache -f -v
+            
+            echo "✅ **Fonts Installed Successfully**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Installed fonts from {backtick}{fonts_dir}/{backtick}:" >> $GITHUB_STEP_SUMMARY
+            echo "{triple_backtick}" >> $GITHUB_STEP_SUMMARY
+            ls -la ~/.local/share/fonts/ >> $GITHUB_STEP_SUMMARY
+            echo "{triple_backtick}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **Warning**: Font directory {backtick}{fonts_dir}{backtick} not found" >> $GITHUB_STEP_SUMMARY
+          fi
+"""
+
+        # Build additional document compilation steps
+        additional_compile_steps = ""
+        additional_rename_steps = ""
+        additional_artifact_files = ""
+        additional_release_files = ""
+
+        for doc in additional_documents:
+            doc_base = doc.replace(".tex", "")
+            additional_compile_steps += f"""
+      - name: Compile additional document ({doc})
+        uses: xu-cheng/latex-action@v3
+        if: ${{{{{{ needs.workflow-setup.outputs.runner == 'ubuntu-latest' }}}}}}
+        with:
+          root_file: {doc}
+          latexmk_shell_escape: true
+          {f'args: "{outdir_arg}"' if outdir_arg else ''}
+
+      - name: Compile additional document ({doc}) - Self-hosted
+        if: ${{{{{{ needs.workflow-setup.outputs.runner == 'self-texlive' }}}}}}
+        run: |
+          latexmk -shell-escape {latexmk_args} {outdir_arg} -file-line-error -interaction=nonstopmode {doc}
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Additional Document: {doc}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Compiled**: ✅" >> $GITHUB_STEP_SUMMARY
+"""
+            # Add to artifact and release files
+            additional_artifact_files += f"\n            ./{pdf_location}{doc_base}.pdf"
+            additional_release_files += f"\n            artifact/{doc_base}.pdf"
+
         return f"""name: Compile LaTeX and Release PDF
 
 # This workflow uses article-cli for:
 # - Git hooks setup (article-cli setup)
 # - Bibliography updates from Zotero (article-cli update-bibtex)
 # - LaTeX build file cleanup (article-cli clean)
+#
+# Project type: {project_type}
+# LaTeX engine: {'XeLaTeX' if use_xelatex else 'pdfLaTeX'}
+# Output directory: {output_dir if output_dir else 'root'}
+# Additional documents: {', '.join(additional_documents) if additional_documents else 'none'}
 
 on:
   push:
@@ -700,6 +846,10 @@ jobs:
           fi
         env:
           ZOTERO_API_KEY: ${{{{ secrets.ZOTERO_API_KEY }}}}
+{font_install_step}
+      - name: Create output directory
+        if: ${{{{ '{output_dir}' != '' }}}}
+        run: mkdir -p {output_dir}
 
       - name: Compile LaTeX document
         uses: xu-cheng/latex-action@v3
@@ -707,6 +857,8 @@ jobs:
         with:
           root_file: ${{{{ needs.workflow-setup.outputs.tex }}}}
           latexmk_shell_escape: true
+          latexmk_use_xelatex: {'true' if use_xelatex else 'false'}
+          {f'args: "{outdir_arg}"' if outdir_arg else ''}
           post_compile: "article-cli clean"
 
       - name: Generate compilation summary (Ubuntu)
@@ -715,27 +867,29 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## 🔨 LaTeX Compilation (Ubuntu)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Engine**: latexmk with shell-escape" >> $GITHUB_STEP_SUMMARY
+          echo "- **Engine**: latexmk {'with XeLaTeX' if use_xelatex else 'with pdfLaTeX'} (shell-escape enabled)" >> $GITHUB_STEP_SUMMARY
           echo "- **Runner**: ubuntu-latest (xu-cheng/latex-action@v3)" >> $GITHUB_STEP_SUMMARY
-          echo "- **Source**: \`${{{{ needs.workflow-setup.outputs.tex }}}}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Source**: `${{{{ needs.workflow-setup.outputs.tex }}}}`" >> $GITHUB_STEP_SUMMARY
+          {output_dir_echo}
           echo "- **Clean-up**: article-cli clean (from isolated venv)" >> $GITHUB_STEP_SUMMARY
 
       - name: Compile LaTeX document
         if: ${{{{ needs.workflow-setup.outputs.runner == 'self-texlive' }}}}
         run: |
-          latexmk -shell-escape -pdf -file-line-error -interaction=nonstopmode  ${{{{ needs.workflow-setup.outputs.tex }}}}
+          latexmk -shell-escape {latexmk_args} {outdir_arg} -file-line-error -interaction=nonstopmode ${{{{ needs.workflow-setup.outputs.tex }}}}
           article-cli clean
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## 🔨 LaTeX Compilation (Self-hosted)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Engine**: latexmk with shell-escape" >> $GITHUB_STEP_SUMMARY
+          echo "- **Engine**: latexmk {'with XeLaTeX' if use_xelatex else 'with pdfLaTeX'} (shell-escape enabled)" >> $GITHUB_STEP_SUMMARY
           echo "- **Runner**: self-texlive (self-hosted)" >> $GITHUB_STEP_SUMMARY
-          echo "- **Source**: \`${{{{ needs.workflow-setup.outputs.tex }}}}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Source**: `${{{{ needs.workflow-setup.outputs.tex }}}}`" >> $GITHUB_STEP_SUMMARY
+          {output_dir_echo}
           echo "- **Clean-up**: article-cli clean (from isolated venv)" >> $GITHUB_STEP_SUMMARY
-
+{additional_compile_steps}
       - name: Rename PDF
         run: |
-          mv {tex_base}.pdf ${{{{ needs.workflow-setup.outputs.pdf }}}}
+          mv {pdf_location}{tex_base}.pdf ${{{{ needs.workflow-setup.outputs.pdf }}}}
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## 📄 LaTeX Compilation Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -770,10 +924,11 @@ jobs:
             ./*.gin
             ./*.bbl
             ./*.tikz
-            ./${{{{ needs.workflow-setup.outputs.pdf }}}}
+            ./${{{{ needs.workflow-setup.outputs.pdf }}}}{additional_artifact_files}
             ./README.md
             ./fig-*
             ./data/*
+            {f'./{fonts_dir}/*' if fonts_dir else ''}
             !./.git*
             !./.github*
             !./.vscode*
@@ -856,6 +1011,7 @@ jobs:
         with:
           root_file: ${{{{ needs.workflow-setup.outputs.tex }}}}
           latexmk_shell_escape: true
+          latexmk_use_xelatex: {'true' if use_xelatex else 'false'}
           working_directory: ${{{{ github.workspace }}}}/artifact
       -
         name: Generate artifact verification summary (Ubuntu)
@@ -871,7 +1027,7 @@ jobs:
         name: Check compilation of LaTeX document from artifact
         if: ${{{{ needs.workflow-setup.outputs.runner == 'self-texlive' }}}}
         run: |
-          latexmk -shell-escape -pdf -file-line-error -interaction=nonstopmode  ${{{{ needs.workflow-setup.outputs.tex }}}}
+          latexmk -shell-escape {latexmk_args} -file-line-error -interaction=nonstopmode ${{{{ needs.workflow-setup.outputs.tex }}}}
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "✅ **Artifact Verification Completed**" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -928,7 +1084,7 @@ jobs:
           tag_name: ${{{{ github.ref }}}}
           token: ${{{{ secrets.GITHUB_TOKEN }}}}
           files: |
-            artifact/${{{{ needs.workflow-setup.outputs.prefixwithref }}}}.pdf
+            artifact/${{{{ needs.workflow-setup.outputs.prefixwithref }}}}.pdf{additional_release_files}
             ${{{{ needs.workflow-setup.outputs.prefixwithref }}}}.tar.gz
 
       - name: Generate release summary
@@ -961,6 +1117,10 @@ jobs:
         project_type: str = "article",
         theme: str = "",
         aspect_ratio: str = "169",
+        additional_documents: Optional[List[str]] = None,
+        output_dir: str = "",
+        fonts_dir: str = "",
+        install_fonts: bool = False,
     ) -> bool:
         """
         Create pyproject.toml file
@@ -974,6 +1134,10 @@ jobs:
             project_type: Type of project
             theme: Beamer theme for presentations
             aspect_ratio: Aspect ratio for presentations
+            additional_documents: List of additional .tex files to compile
+            output_dir: Output directory for compiled files
+            fonts_dir: Directory containing custom fonts
+            install_fonts: Whether to install fonts in CI
 
         Returns:
             True if successful
@@ -988,7 +1152,9 @@ jobs:
         authors_toml = ",\n    ".join([f'{{name = "{author}"}}' for author in authors])
 
         # Determine default engine based on project type
-        default_engine = "xelatex" if project_type == "presentation" else "latexmk"
+        default_engine = (
+            "xelatex" if project_type in ["presentation", "poster"] else "latexmk"
+        )
 
         # Build project type specific config
         project_type_config = f"""
@@ -1011,6 +1177,29 @@ size = "a0"
 orientation = "portrait"
 columns = 3
 """
+
+        # Build documents configuration
+        documents_config = ""
+        if additional_documents:
+            additional_list = ", ".join([f'"{doc}"' for doc in additional_documents])
+            documents_config = f"""
+[tool.article-cli.documents]
+# main = "{self.repo_path.name}.tex"  # Uncomment to specify main document
+additional = [{additional_list}]
+"""
+
+        # Build workflow configuration
+        workflow_config = ""
+        if output_dir or fonts_dir or install_fonts:
+            workflow_config = """
+[tool.article-cli.workflow]
+"""
+            if output_dir:
+                workflow_config += f'output_dir = "{output_dir}"\n'
+            if fonts_dir:
+                workflow_config += f'fonts_dir = "{fonts_dir}"\n'
+            if install_fonts:
+                workflow_config += f"install_fonts = true\n"
 
         pyproject_content = f"""# {project_type.capitalize()} Repository Dependency Management
 # This file manages dependencies for the LaTeX {project_type} project
@@ -1049,7 +1238,7 @@ clean_extensions = [
     ".idx", ".ilg", ".ind", ".lof", ".lot", ".nav", ".snm", ".vrb"
 ]
 engine = "{default_engine}"
-{project_type_config}"""
+{project_type_config}{documents_config}{workflow_config}"""
 
         pyproject_path.write_text(pyproject_content)
         print_success(f"Created: {pyproject_path.relative_to(self.repo_path)}")

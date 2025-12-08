@@ -180,6 +180,21 @@ class Config:
             "project_type": self.get("project", "type", "article"),
         }
 
+    def get_documents_config(self) -> Dict[str, Any]:
+        """Get documents configuration for multi-document projects"""
+        return {
+            "main": self.get("documents", "main", ""),
+            "additional": self.get("documents", "additional", []),
+        }
+
+    def get_workflow_config(self) -> Dict[str, Any]:
+        """Get workflow-specific configuration for GitHub Actions"""
+        return {
+            "output_dir": self.get("workflow", "output_dir", ""),
+            "fonts_dir": self.get("workflow", "fonts_dir", ""),
+            "install_fonts": self.get("workflow", "install_fonts", False),
+        }
+
     def get_presentation_config(self) -> Dict[str, Any]:
         """Get presentation-specific configuration (for Beamer)"""
         return {
@@ -327,6 +342,25 @@ orientation = "portrait"
 
 # Number of columns
 columns = 3
+
+# Multi-document projects (for projects with multiple LaTeX documents)
+[documents]
+# Main document to compile
+main = "main.tex"
+
+# Additional documents to compile (e.g., poster alongside presentation)
+# additional = ["poster.tex"]
+
+# Workflow settings for GitHub Actions
+[workflow]
+# Output directory for compiled files (empty string means root directory)
+# output_dir = "build"
+
+# Directory containing custom fonts (for XeLaTeX compilation)
+# fonts_dir = "fonts"
+
+# Whether to install custom fonts in CI environment
+# install_fonts = true
 """
 
         try:
