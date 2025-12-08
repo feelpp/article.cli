@@ -266,7 +266,9 @@ clean_extensions = [
 build_dir = "."
 
 # Default LaTeX engine
-engine = "latexmk"  # Options: "latexmk", "pdflatex"
+# Options: "latexmk", "pdflatex", "xelatex", "lualatex"
+# Use xelatex or lualatex for documents with custom fonts (e.g., Beamer presentations)
+engine = "latexmk"
 
 # Enable shell escape by default
 shell_escape = false
