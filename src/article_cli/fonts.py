@@ -9,25 +9,37 @@ import zipfile
 import tempfile
 from pathlib import Path
 from typing import List, Dict, Optional, Any
-from urllib.request import urlopen, Request
-from urllib.error import URLError, HTTPError
+
+import requests
 
 from .zotero import print_error, print_info, print_success, print_warning
 
 
 # Default font sources for common themes
+# Note: Marianne font from French government requires manual download due to Cloudflare protection.
+# Configure custom URL in pyproject.toml if you have a mirror or local copy.
 DEFAULT_FONT_SOURCES = [
     {
-        "name": "Marianne",
-        "url": "https://www.systeme-de-design.gouv.fr/uploads/Marianne_fd0ba9c190.zip",
-        "description": "French government official font (Système de Design de l'État)",
+        "name": "Roboto",
+        "url": "https://github.com/googlefonts/roboto/releases/download/v2.138/roboto-unhinted.zip",
+        "description": "Google's sans-serif font family",
     },
     {
         "name": "Roboto Mono",
-        "url": "https://fonts.google.com/download?family=Roboto+Mono",
+        "url": "https://github.com/googlefonts/RobotoMono/archive/refs/heads/main.zip",
         "description": "Google's monospace font, good for code",
     },
 ]
+
+# Additional font sources that may require special handling
+OPTIONAL_FONT_SOURCES = {
+    "Marianne": {
+        "name": "Marianne",
+        "url": "https://www.info.gouv.fr/upload/media/content/0001/14/e9dd2398914853b3c21c402245866bc74cd3d3c5.zip",
+        "description": "French government official font - TTF version (Système de Design de l'État)",
+        "note": "May require manual download due to Cloudflare protection",
+    },
+}
 
 
 class FontInstaller:
@@ -163,25 +175,30 @@ class FontInstaller:
             url: URL to download
             dest: Destination path
         """
-        # Create request with user agent to avoid blocks
-        headers = {"User-Agent": "Mozilla/5.0 (compatible; article-cli font installer)"}
-        request = Request(url, headers=headers)
+        # Use requests library for better redirect and header handling
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+        }
 
         try:
-            with urlopen(request, timeout=60) as response:
-                # Get file size if available
-                content_length = response.headers.get("Content-Length")
-                total_size = int(content_length) if content_length else None
+            response = requests.get(
+                url, headers=headers, allow_redirects=True, stream=True, timeout=60
+            )
+            response.raise_for_status()
 
-                # Download in chunks
-                chunk_size = 8192
-                downloaded = 0
+            # Get file size if available
+            content_length = response.headers.get("Content-Length")
+            total_size = int(content_length) if content_length else None
 
-                with open(dest, "wb") as f:
-                    while True:
-                        chunk = response.read(chunk_size)
-                        if not chunk:
-                            break
+            # Download in chunks
+            chunk_size = 8192
+            downloaded = 0
+
+            with open(dest, "wb") as f:
+                for chunk in response.iter_content(chunk_size=chunk_size):
+                    if chunk:
                         f.write(chunk)
                         downloaded += len(chunk)
 
@@ -200,14 +217,16 @@ class FontInstaller:
                                 flush=True,
                             )
 
-                print()  # New line after progress
+            print()  # New line after progress
 
-        except HTTPError as e:
-            raise RuntimeError(f"HTTP error {e.code}: {e.reason}")
-        except URLError as e:
-            raise RuntimeError(f"URL error: {e.reason}")
-        except TimeoutError:
+        except requests.exceptions.HTTPError as e:
+            raise RuntimeError(f"HTTP error: {e}")
+        except requests.exceptions.ConnectionError as e:
+            raise RuntimeError(f"Connection error: {e}")
+        except requests.exceptions.Timeout:
             raise RuntimeError("Download timed out")
+        except requests.exceptions.RequestException as e:
+            raise RuntimeError(f"Download failed: {e}")
 
     def _extract_zip(self, zip_path: Path, target_dir: Path) -> None:
         """
