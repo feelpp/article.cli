@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2025-12-08
+
+### Added
+- **New `install-theme` command**: Download and install Beamer themes for presentations
+  - `article-cli install-theme numpex` - Install numpex theme
+  - `article-cli install-theme --list` - List available themes
+  - `article-cli install-theme --dir themes/` - Install to custom directory
+  - `article-cli install-theme my-theme --url URL` - Install from custom URL
+  - Built-in support for numpex theme from presentation.template.d
+  - Automatic extraction of .sty files and theme directories (e.g., images/)
+  - Configurable via `[themes]` section in config file
+  - Detection of font/engine requirements for themes
+- New `ThemeInstaller` class for theme management
+- New `get_themes_config()` method in Config class
+- 31 new tests for theme installation functionality
+
 ## [1.2.0] - 2025-11-18
 
 ### Added
@@ -165,6 +181,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `article-cli config show` - Show current configuration
 - `article-cli config create` - Create sample configuration
 
+[1.3.0]: https://github.com/feelpp/article.cli/releases/tag/v1.3.0
 [1.2.0]: https://github.com/feelpp/article.cli/releases/tag/v1.2.0
 [1.1.1]: https://github.com/feelpp/article.cli/releases/tag/v1.1.1
 [1.1.0]: https://github.com/feelpp/article.cli/releases/tag/v1.1.0
