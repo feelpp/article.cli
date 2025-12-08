@@ -94,9 +94,9 @@ Environment variables:
     )
     compile_parser.add_argument(
         "--engine",
-        choices=["latexmk", "pdflatex"],
+        choices=["latexmk", "pdflatex", "xelatex", "lualatex"],
         default="latexmk",
-        help="LaTeX engine to use (default: latexmk)",
+        help="LaTeX engine to use (default: latexmk). Use xelatex/lualatex for custom fonts.",
     )
     compile_parser.add_argument(
         "--shell-escape",

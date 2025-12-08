@@ -68,6 +68,10 @@ class LaTeXCompiler:
             return self._run_latexmk(tex_path, shell_escape, output_dir)
         elif engine == "pdflatex":
             return self._run_pdflatex(tex_path, shell_escape, output_dir)
+        elif engine == "xelatex":
+            return self._run_xelatex(tex_path, shell_escape, output_dir)
+        elif engine == "lualatex":
+            return self._run_lualatex(tex_path, shell_escape, output_dir)
         else:
             print_error(f"Unknown engine: {engine}")
             return False
@@ -76,8 +80,11 @@ class LaTeXCompiler:
         self, tex_path: Path, engine: str, shell_escape: bool, output_dir: Optional[str]
     ) -> bool:
         """Compile document and watch for changes"""
-        if engine == "pdflatex":
-            print_error("Watch mode is only supported with latexmk engine")
+        if engine in ["pdflatex", "xelatex", "lualatex"]:
+            print_error(
+                "Watch mode is only supported with latexmk engine. "
+                "Use: article-cli compile --engine latexmk --watch"
+            )
             return False
 
         print_info("Starting watch mode. Press Ctrl+C to stop.")
@@ -230,17 +237,33 @@ class LaTeXCompiler:
         shell_escape: bool,
         output_dir: Optional[str],
         continuous: bool = False,
+        pdf_mode: str = "pdf",
     ) -> List[str]:
-        """Build latexmk command based on LaTeX Workshop configuration"""
+        """Build latexmk command based on LaTeX Workshop configuration
+
+        Args:
+            tex_path: Path to .tex file
+            shell_escape: Enable shell escape
+            output_dir: Output directory
+            continuous: Enable preview continuous mode
+            pdf_mode: PDF generation mode ("pdf", "xelatex", "lualatex")
+        """
         cmd = ["latexmk"]
 
         # Core options (from LaTeX Workshop)
         if shell_escape:
             cmd.append("--shell-escape")
 
+        # Select PDF generation engine
+        if pdf_mode == "xelatex":
+            cmd.append("-xelatex")
+        elif pdf_mode == "lualatex":
+            cmd.append("-lualatex")
+        else:
+            cmd.append("-pdf")  # Default: pdflatex
+
         cmd.extend(
             [
-                "-pdf",
                 "-interaction=nonstopmode",
                 "-synctex=1",
             ]
@@ -263,6 +286,164 @@ class LaTeXCompiler:
         cmd = ["pdflatex"]
 
         # Core options (from LaTeX Workshop)
+        if shell_escape:
+            cmd.append("--shell-escape")
+
+        cmd.extend(
+            [
+                "-synctex=1",
+                "-interaction=nonstopmode",
+                "-file-line-error",
+            ]
+        )
+
+        if output_dir:
+            cmd.extend(["-output-directory", output_dir])
+
+        cmd.append(str(tex_path))
+
+        return cmd
+
+    def _run_xelatex(
+        self, tex_path: Path, shell_escape: bool, output_dir: Optional[str]
+    ) -> bool:
+        """Run xelatex compilation (multiple passes for cross-references)"""
+        cmd = self._build_xelatex_command(tex_path, shell_escape, output_dir)
+
+        try:
+            # Run multiple passes for cross-references, bibliography, etc.
+            passes = ["First pass", "Second pass", "Third pass"]
+
+            for i, pass_name in enumerate(passes):
+                print_info(f"{pass_name} (xelatex)...")
+                result = subprocess.run(
+                    cmd,
+                    cwd=tex_path.parent,
+                    capture_output=True,
+                    text=True,
+                    timeout=120,  # 2 minute timeout per pass
+                )
+
+                if result.returncode != 0:
+                    print_error(f"❌ {pass_name} failed")
+                    if result.stdout:
+                        print("STDOUT:")
+                        print(result.stdout)
+                    if result.stderr:
+                        print("STDERR:")
+                        print(result.stderr)
+                    return False
+
+                # Check if we need to run bibtex/biber
+                if i == 0:  # After first pass
+                    self._run_bibliography_if_needed(tex_path, result.stdout)
+
+            pdf_name = tex_path.with_suffix(".pdf").name
+            if output_dir:
+                pdf_path = Path(output_dir) / pdf_name
+            else:
+                pdf_path = tex_path.with_suffix(".pdf")
+
+            if pdf_path.exists():
+                print_success(f"✅ Compilation successful: {pdf_path}")
+                self._show_pdf_info(pdf_path)
+                return True
+            else:
+                print_error("Compilation reported success but PDF not found")
+                return False
+
+        except subprocess.TimeoutExpired:
+            print_error("Compilation timed out")
+            return False
+        except Exception as e:
+            print_error(f"Compilation error: {e}")
+            return False
+
+    def _build_xelatex_command(
+        self, tex_path: Path, shell_escape: bool, output_dir: Optional[str]
+    ) -> List[str]:
+        """Build xelatex command"""
+        cmd = ["xelatex"]
+
+        if shell_escape:
+            cmd.append("--shell-escape")
+
+        cmd.extend(
+            [
+                "-synctex=1",
+                "-interaction=nonstopmode",
+                "-file-line-error",
+            ]
+        )
+
+        if output_dir:
+            cmd.extend(["-output-directory", output_dir])
+
+        cmd.append(str(tex_path))
+
+        return cmd
+
+    def _run_lualatex(
+        self, tex_path: Path, shell_escape: bool, output_dir: Optional[str]
+    ) -> bool:
+        """Run lualatex compilation (multiple passes for cross-references)"""
+        cmd = self._build_lualatex_command(tex_path, shell_escape, output_dir)
+
+        try:
+            # Run multiple passes for cross-references, bibliography, etc.
+            passes = ["First pass", "Second pass", "Third pass"]
+
+            for i, pass_name in enumerate(passes):
+                print_info(f"{pass_name} (lualatex)...")
+                result = subprocess.run(
+                    cmd,
+                    cwd=tex_path.parent,
+                    capture_output=True,
+                    text=True,
+                    timeout=120,  # 2 minute timeout per pass
+                )
+
+                if result.returncode != 0:
+                    print_error(f"❌ {pass_name} failed")
+                    if result.stdout:
+                        print("STDOUT:")
+                        print(result.stdout)
+                    if result.stderr:
+                        print("STDERR:")
+                        print(result.stderr)
+                    return False
+
+                # Check if we need to run bibtex/biber
+                if i == 0:  # After first pass
+                    self._run_bibliography_if_needed(tex_path, result.stdout)
+
+            pdf_name = tex_path.with_suffix(".pdf").name
+            if output_dir:
+                pdf_path = Path(output_dir) / pdf_name
+            else:
+                pdf_path = tex_path.with_suffix(".pdf")
+
+            if pdf_path.exists():
+                print_success(f"✅ Compilation successful: {pdf_path}")
+                self._show_pdf_info(pdf_path)
+                return True
+            else:
+                print_error("Compilation reported success but PDF not found")
+                return False
+
+        except subprocess.TimeoutExpired:
+            print_error("Compilation timed out")
+            return False
+        except Exception as e:
+            print_error(f"Compilation error: {e}")
+            return False
+
+    def _build_lualatex_command(
+        self, tex_path: Path, shell_escape: bool, output_dir: Optional[str]
+    ) -> List[str]:
+        """Build lualatex command"""
+        cmd = ["lualatex"]
+
         if shell_escape:
             cmd.append("--shell-escape")
 
@@ -332,6 +513,8 @@ class LaTeXCompiler:
         tools = {
             "latexmk": self._check_command("latexmk"),
             "pdflatex": self._check_command("pdflatex"),
+            "xelatex": self._check_command("xelatex"),
+            "lualatex": self._check_command("lualatex"),
             "bibtex": self._check_command("bibtex"),
         }
 
