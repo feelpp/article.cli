@@ -33,9 +33,12 @@ class RepositorySetup:
         group_id: str = "4678293",
         force: bool = False,
         main_tex_file: Optional[str] = None,
+        project_type: str = "article",
+        theme: str = "",
+        aspect_ratio: str = "169",
     ) -> bool:
         """
-        Initialize a complete LaTeX article repository
+        Initialize a complete LaTeX repository (article, presentation, or poster)
 
         Creates:
         - GitHub Actions workflow for automated PDF compilation
@@ -45,60 +48,79 @@ class RepositorySetup:
         - .vscode/settings.json with LaTeX Workshop configuration
         - LTeX dictionary files for spell checking
         - hooks/post-commit for gitinfo2 integration
-        - main.tex if no .tex file exists
+        - main.tex if no .tex file exists (or presentation/poster template)
 
         Args:
-            title: Article title
+            title: Document title
             authors: List of author names
             group_id: Zotero group ID
             force: Overwrite existing files if True
             main_tex_file: Main .tex filename (auto-detected if None, created if missing)
+            project_type: Type of project ("article", "presentation", "poster")
+            theme: Beamer theme for presentations (e.g., "numpex", "metropolis")
+            aspect_ratio: Aspect ratio for presentations ("169", "43", "1610")
 
         Returns:
             True if successful, False otherwise
         """
-        print_info(f"Initializing repository at: {self.repo_path}")
+        print_info(f"Initializing {project_type} repository at: {self.repo_path}")
 
         # Detect or validate main .tex file, create if missing
-        tex_file = self._detect_or_create_tex_file(main_tex_file, title, authors, force)
+        tex_file = self._detect_or_create_tex_file(
+            main_tex_file, title, authors, force, project_type, theme, aspect_ratio
+        )
         if not tex_file:
             print_error("Failed to detect or create main .tex file")
             return False
 
         project_name = self.repo_path.name
         print_info(f"Project name: {project_name}")
+        print_info(f"Project type: {project_type}")
         print_info(f"Main tex file: {tex_file}")
-        print_info(f"Article title: {title}")
+        print_info(f"Title: {title}")
         print_info(f"Authors: {', '.join(authors)}")
+        if project_type == "presentation" and theme:
+            print_info(f"Beamer theme: {theme}")
 
         try:
             # Create directory structure
             self._create_directories()
 
             # Create GitHub Actions workflows
-            if not self._create_workflow(project_name, tex_file, force):
+            if not self._create_workflow(project_name, tex_file, force, project_type):
                 return False
 
             # Create pyproject.toml
             if not self._create_pyproject(
-                project_name, title, authors, group_id, force
+                project_name,
+                title,
+                authors,
+                group_id,
+                force,
+                project_type,
+                theme,
+                aspect_ratio,
             ):
                 return False
 
             # Create README
-            if not self._create_readme(project_name, title, authors, tex_file, force):
+            if not self._create_readme(
+                project_name, title, authors, tex_file, force, project_type
+            ):
                 return False
 
             # Create .gitignore if needed
             self._create_gitignore(force)
 
             # Create VS Code configuration
-            self._create_vscode_settings(force)
+            self._create_vscode_settings(force, project_type)
 
             # Create git hooks directory and post-commit hook
             self._create_git_hooks(force)
 
-            print_success("\n✅ Repository initialization complete!")
+            print_success(
+                f"\n✅ {project_type.capitalize()} repository initialization complete!"
+            )
             print_info("\nNext steps:")
             print_info("  1. Review and edit pyproject.toml")
             print_info("  2. Add ZOTERO_API_KEY secret to GitHub repository")
@@ -113,16 +135,26 @@ class RepositorySetup:
             return False
 
     def _detect_or_create_tex_file(
-        self, specified: Optional[str], title: str, authors: List[str], force: bool
+        self,
+        specified: Optional[str],
+        title: str,
+        authors: List[str],
+        force: bool,
+        project_type: str = "article",
+        theme: str = "",
+        aspect_ratio: str = "169",
     ) -> Optional[str]:
         """
         Detect main .tex file in repository or create one if missing
 
         Args:
             specified: User-specified filename (takes priority)
-            title: Article title (for creating new .tex file)
+            title: Document title (for creating new .tex file)
             authors: List of author names (for creating new .tex file)
             force: Overwrite existing file if True
+            project_type: Type of project ("article", "presentation", "poster")
+            theme: Beamer theme for presentations
+            aspect_ratio: Aspect ratio for presentations
 
         Returns:
             Main .tex filename or None on failure
@@ -132,7 +164,9 @@ class RepositorySetup:
             if tex_path.exists():
                 return specified
             # Specified file doesn't exist - create it
-            if self._create_tex_file(specified, title, authors, force):
+            if self._create_tex_file(
+                specified, title, authors, force, project_type, theme, aspect_ratio
+            ):
                 return specified
             return None
 
@@ -140,10 +174,17 @@ class RepositorySetup:
         tex_files = list(self.repo_path.glob("*.tex"))
 
         if not tex_files:
-            # No .tex files found - create main.tex
-            default_name = "main.tex"
+            # No .tex files found - create default based on project type
+            if project_type == "presentation":
+                default_name = "presentation.tex"
+            elif project_type == "poster":
+                default_name = "poster.tex"
+            else:
+                default_name = "main.tex"
             print_info(f"No .tex file found, creating {default_name}")
-            if self._create_tex_file(default_name, title, authors, force):
+            if self._create_tex_file(
+                default_name, title, authors, force, project_type, theme, aspect_ratio
+            ):
                 return default_name
             return None
 
@@ -151,7 +192,13 @@ class RepositorySetup:
             return tex_files[0].name
 
         # Multiple .tex files - prefer common patterns
-        for pattern in ["main.tex", "article.tex", f"{self.repo_path.name}.tex"]:
+        for pattern in [
+            "main.tex",
+            "article.tex",
+            "presentation.tex",
+            "poster.tex",
+            f"{self.repo_path.name}.tex",
+        ]:
             if (self.repo_path / pattern).exists():
                 return pattern
 
@@ -163,16 +210,26 @@ class RepositorySetup:
         return tex_files[0].name
 
     def _create_tex_file(
-        self, filename: str, title: str, authors: List[str], force: bool
+        self,
+        filename: str,
+        title: str,
+        authors: List[str],
+        force: bool,
+        project_type: str = "article",
+        theme: str = "",
+        aspect_ratio: str = "169",
     ) -> bool:
         """
-        Create a basic LaTeX article file
+        Create a LaTeX file based on project type
 
         Args:
             filename: Name of the .tex file to create
-            title: Article title
+            title: Document title
             authors: List of author names
             force: Overwrite if exists
+            project_type: Type of project ("article", "presentation", "poster")
+            theme: Beamer theme for presentations
+            aspect_ratio: Aspect ratio for presentations
 
         Returns:
             True if successful
@@ -184,9 +241,24 @@ class RepositorySetup:
             return True
 
         # Format authors for LaTeX
-        authors_latex = " \\and ".join(authors)
+        authors_latex = " \\\\and ".join(authors)
 
-        tex_content = f"""\\documentclass[a4paper,11pt]{{article}}
+        if project_type == "presentation":
+            tex_content = self._get_presentation_template(
+                title, authors_latex, theme, aspect_ratio
+            )
+        elif project_type == "poster":
+            tex_content = self._get_poster_template(title, authors_latex)
+        else:
+            tex_content = self._get_article_template(title, authors_latex)
+
+        tex_path.write_text(tex_content)
+        print_success(f"Created: {tex_path.relative_to(self.repo_path)}")
+        return True
+
+    def _get_article_template(self, title: str, authors_latex: str) -> str:
+        """Get article template content"""
+        return f"""\\documentclass[a4paper,11pt]{{article}}
 
 % Essential packages
 \\usepackage[utf8]{{inputenc}}
@@ -246,9 +318,140 @@ Branch: \\gitBranch
 \\end{{document}}
 """
 
-        tex_path.write_text(tex_content)
-        print_success(f"Created: {tex_path.relative_to(self.repo_path)}")
-        return True
+    def _get_presentation_template(
+        self, title: str, authors_latex: str, theme: str, aspect_ratio: str
+    ) -> str:
+        """Get Beamer presentation template content"""
+        theme_line = f"\\usetheme{{{theme}}}" if theme else "% \\usetheme{default}"
+
+        return f"""\\documentclass[aspectratio={aspect_ratio}]{{beamer}}
+
+% Theme configuration
+{theme_line}
+
+% Essential packages
+\\usepackage{{tikz}}
+\\usepackage{{pgfplots}}
+\\pgfplotsset{{compat=newest}}
+\\usepackage{{booktabs}}
+\\usepackage{{hyperref}}
+
+% Bibliography (optional)
+% \\usepackage[style=numeric,sorting=none]{{biblatex}}
+% \\addbibresource{{references.bib}}
+
+% Git version information
+\\usepackage{{gitinfo2}}
+
+% Title and authors
+\\title{{{title}}}
+\\author{{{authors_latex}}}
+\\date{{\\today}}
+\\institute{{Your Institution}}
+
+\\begin{{document}}
+
+\\maketitle
+
+\\begin{{frame}}{{Outline}}
+  \\tableofcontents
+\\end{{frame}}
+
+\\section{{Introduction}}
+
+\\begin{{frame}}{{Introduction}}
+  \\begin{{itemize}}
+    \\item First point
+    \\item Second point
+    \\item Third point
+  \\end{{itemize}}
+\\end{{frame}}
+
+\\section{{Main Content}}
+
+\\begin{{frame}}{{Main Content}}
+  Your main content goes here.
+\\end{{frame}}
+
+\\section{{Conclusion}}
+
+\\begin{{frame}}{{Conclusion}}
+  \\begin{{itemize}}
+    \\item Summary point 1
+    \\item Summary point 2
+  \\end{{itemize}}
+\\end{{frame}}
+
+\\begin{{frame}}{{Questions?}}
+  \\centering
+  \\Large Thank you for your attention!
+
+  \\vspace{{1cm}}
+  \\small
+  Git version: \\gitAbbrevHash{{}} (\\gitAuthorIsoDate)
+\\end{{frame}}
+
+\\end{{document}}
+"""
+
+    def _get_poster_template(self, title: str, authors_latex: str) -> str:
+        """Get poster template content"""
+        return f"""\\documentclass[a0paper,portrait]{{tikzposter}}
+
+% Essential packages
+\\usepackage{{amsmath,amssymb}}
+\\usepackage{{graphicx}}
+\\usepackage{{booktabs}}
+
+% Git version information
+\\usepackage{{gitinfo2}}
+
+% Title and authors
+\\title{{{title}}}
+\\author{{{authors_latex}}}
+\\institute{{Your Institution}}
+\\date{{\\today}}
+
+% Theme
+\\usetheme{{Default}}
+
+\\begin{{document}}
+
+\\maketitle
+
+\\begin{{columns}}
+  \\column{{0.5}}
+
+  \\block{{Introduction}}{{
+    Your introduction goes here.
+  }}
+
+  \\block{{Methods}}{{
+    Your methods description goes here.
+  }}
+
+  \\column{{0.5}}
+
+  \\block{{Results}}{{
+    Your results go here.
+  }}
+
+  \\block{{Conclusions}}{{
+    Your conclusions go here.
+  }}
+
+\\end{{columns}}
+
+\\block{{References}}{{
+  Your references go here.
+}}
+
+\\note[targetoffsetx=0cm, targetoffsety=-8cm, width=0.4\\textwidth]{{
+  Git version: \\gitAbbrevHash{{}} (\\gitAuthorIsoDate)
+}}
+
+\\end{{document}}
+"""
 
     def _create_directories(self) -> None:
         """Create necessary directory structure"""
@@ -262,13 +465,21 @@ Branch: \\gitBranch
             directory.mkdir(parents=True, exist_ok=True)
             print_info(f"Created directory: {directory.relative_to(self.repo_path)}")
 
-    def _create_workflow(self, project_name: str, tex_file: str, force: bool) -> bool:
+    def _create_workflow(
+        self,
+        project_name: str,
+        tex_file: str,
+        force: bool,
+        project_type: str = "article",
+    ) -> bool:
         """
         Create GitHub Actions workflow file
 
         Args:
             project_name: Name of the project
             tex_file: Main .tex filename
+            force: Overwrite if exists
+            project_type: Type of project for workflow customization
             force: Overwrite if exists
 
         Returns:
@@ -747,16 +958,22 @@ jobs:
         authors: List[str],
         group_id: str,
         force: bool,
+        project_type: str = "article",
+        theme: str = "",
+        aspect_ratio: str = "169",
     ) -> bool:
         """
         Create pyproject.toml file
 
         Args:
             project_name: Name of the project
-            title: Article title
+            title: Document title
             authors: List of author names
             group_id: Zotero group ID
             force: Overwrite if exists
+            project_type: Type of project
+            theme: Beamer theme for presentations
+            aspect_ratio: Aspect ratio for presentations
 
         Returns:
             True if successful
@@ -764,14 +981,39 @@ jobs:
         pyproject_path = self.repo_path / "pyproject.toml"
 
         if pyproject_path.exists() and not force:
-            print_info(f"pyproject.toml already exists (use --force to overwrite)")
+            print_info("pyproject.toml already exists (use --force to overwrite)")
             return True
 
         # Format authors for TOML
         authors_toml = ",\n    ".join([f'{{name = "{author}"}}' for author in authors])
 
-        pyproject_content = f"""# Article Repository Dependency Management
-# This file manages dependencies for the LaTeX article project
+        # Determine default engine based on project type
+        default_engine = "xelatex" if project_type == "presentation" else "latexmk"
+
+        # Build project type specific config
+        project_type_config = f"""
+[tool.article-cli.project]
+type = "{project_type}"
+"""
+
+        if project_type == "presentation":
+            project_type_config += f"""
+[tool.article-cli.presentation]
+theme = "{theme}"
+aspect_ratio = "{aspect_ratio}"
+color_theme = ""
+font_theme = ""
+"""
+        elif project_type == "poster":
+            project_type_config += """
+[tool.article-cli.poster]
+size = "a0"
+orientation = "portrait"
+columns = 3
+"""
+
+        pyproject_content = f"""# {project_type.capitalize()} Repository Dependency Management
+# This file manages dependencies for the LaTeX {project_type} project
 
 [project]
 name = "{project_name}"
@@ -783,8 +1025,8 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
-    "article-cli>=1.1.0",
-    # Add other dependencies your article might need:
+    "article-cli>=1.2.0",
+    # Add other dependencies your project might need:
     # "matplotlib>=3.5.0",
     # "numpy>=1.20.0",
     # "pandas>=1.3.0",
@@ -804,9 +1046,10 @@ default_branch = "main"
 clean_extensions = [
     ".aux", ".bbl", ".blg", ".log", ".out", ".pyg",
     ".fls", ".synctex.gz", ".toc", ".fdb_latexmk",
-    ".idx", ".ilg", ".ind", ".lof", ".lot"
+    ".idx", ".ilg", ".ind", ".lof", ".lot", ".nav", ".snm", ".vrb"
 ]
-"""
+engine = "{default_engine}"
+{project_type_config}"""
 
         pyproject_path.write_text(pyproject_content)
         print_success(f"Created: {pyproject_path.relative_to(self.repo_path)}")
@@ -819,16 +1062,18 @@ clean_extensions = [
         authors: List[str],
         tex_file: str,
         force: bool,
+        project_type: str = "article",
     ) -> bool:
         """
         Create README.md file
 
         Args:
             project_name: Name of the project
-            title: Article title
+            title: Document title
             authors: List of author names
             tex_file: Main .tex filename
             force: Overwrite if exists
+            project_type: Type of project
 
         Returns:
             True if successful
@@ -836,10 +1081,21 @@ clean_extensions = [
         readme_path = self.repo_path / "README.md"
 
         if readme_path.exists() and not force:
-            print_info(f"README.md already exists (use --force to overwrite)")
+            print_info("README.md already exists (use --force to overwrite)")
             return True
 
         authors_list = "\n".join([f"- {author}" for author in authors])
+
+        # Determine build command based on project type
+        if project_type == "presentation":
+            build_cmd = f"latexmk -xelatex {tex_file}"
+            doc_type = "presentation"
+        elif project_type == "poster":
+            build_cmd = f"latexmk -xelatex {tex_file}"
+            doc_type = "poster"
+        else:
+            build_cmd = f"latexmk -pdf {tex_file}"
+            doc_type = "article"
 
         readme_content = f"""# {title}
 
@@ -849,7 +1105,7 @@ clean_extensions = [
 
 ## Overview
 
-This repository contains the LaTeX source for the article "{title}".
+This repository contains the LaTeX source for the {doc_type} "{title}".
 
 ## Prerequisites
 
@@ -890,7 +1146,12 @@ This repository contains the LaTeX source for the article "{title}".
 ### Local Build
 
 ```bash
-latexmk -pdf {tex_file}
+{build_cmd}
+```
+
+Or using article-cli:
+```bash
+article-cli compile {tex_file}
 ```
 
 ### Clean Build Files
@@ -1042,12 +1303,15 @@ references.bib.backup
 
         return True
 
-    def _create_vscode_settings(self, force: bool) -> bool:
+    def _create_vscode_settings(
+        self, force: bool, project_type: str = "article"
+    ) -> bool:
         """
         Create VS Code settings for LaTeX Workshop
 
         Args:
             force: Overwrite if exists
+            project_type: Type of project (article, presentation, poster)
 
         Returns:
             True if successful
@@ -1060,7 +1324,91 @@ references.bib.backup
             )
             return True
 
-        settings_content = """{
+        # Use XeLaTeX for presentations and posters
+        if project_type in ("presentation", "poster"):
+            settings_content = """{
+    "latex-workshop.latex.recipes": [
+        {
+            "name": "latexmk-xelatex",
+            "tools": [
+                "latexmk-xelatex-shell-escape"
+            ]
+        },
+        {
+            "name": "latexmk-lualatex",
+            "tools": [
+                "latexmk-lualatex-shell-escape"
+            ]
+        },
+        {
+            "name": "xelatex-shell-escape-recipe",
+            "tools": [
+                "xelatex-shell-escape"
+            ]
+        }
+    ],
+    "latex-workshop.latex.tools": [
+        {
+            "name": "latexmk-xelatex-shell-escape",
+            "command": "latexmk",
+            "args": [
+                "--shell-escape",
+                "-xelatex",
+                "-interaction=nonstopmode",
+                "-synctex=1",
+                "%DOC%"
+            ],
+            "env": {}
+        },
+        {
+            "name": "latexmk-lualatex-shell-escape",
+            "command": "latexmk",
+            "args": [
+                "--shell-escape",
+                "-lualatex",
+                "-interaction=nonstopmode",
+                "-synctex=1",
+                "%DOC%"
+            ],
+            "env": {}
+        },
+        {
+            "name": "xelatex-shell-escape",
+            "command": "xelatex",
+            "args": [
+                "--shell-escape",
+                "-synctex=1",
+                "-interaction=nonstopmode",
+                "-file-line-error",
+                "%DOC%"
+            ]
+        }
+    ],
+    "latex-workshop.latex.autoBuild.run": "onSave",
+    "latex-workshop.latex.autoBuild.enabled": true,
+    "latex-workshop.latex.build.showOutput": "always",
+    "latex-workshop.latex.outDir": "%DIR%",
+    "latex-workshop.latex.clean.subfolder.enabled": true,
+    "latex-workshop.message.badbox.show": "none",
+    "workbench.editor.pinnedTabsOnSeparateRow": true,
+    "ltex.latex.commands": {
+        "\\\\author{}": "ignore",
+        "\\\\IfFileExists{}{}": "ignore",
+        "\\\\todo{}": "ignore",
+        "\\\\todo[]{}": "ignore",
+        "\\\\ts{}": "ignore",
+        "\\\\cp{}": "ignore",
+        "\\\\pgfmathprintnumber{}": "dummy",
+        "\\\\feelpp{}": "dummy",
+        "\\\\pgfplotstableread[]{}": "ignore",
+        "\\\\xpatchcmd{}{}{}{}{}": "ignore"
+    },
+    "ltex.enabled": true,
+    "ltex.language": "en-US"
+}
+"""
+        else:
+            settings_content = """{
     "latex-workshop.latex.recipes": [
         {
             "name": "latexmk-pdf",
