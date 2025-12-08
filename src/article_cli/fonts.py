@@ -287,7 +287,7 @@ class FontInstaller:
             if not search_dir.exists():
                 return []
 
-        font_files = []
+        font_files: List[Path] = []
         for ext in (".ttf", ".otf", ".woff", ".woff2"):
             font_files.extend(search_dir.rglob(f"*{ext}"))
 
