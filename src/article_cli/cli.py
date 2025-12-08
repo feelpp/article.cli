@@ -36,6 +36,8 @@ Examples:
   %(prog)s delete v1.0.0                  # Delete release
   %(prog)s update-bibtex                  # Update from Zotero
   %(prog)s config create                  # Create sample config file
+  %(prog)s install-fonts                  # Install fonts for XeLaTeX
+  %(prog)s install-fonts --list           # List installed fonts
 
 Environment variables:
   ZOTERO_API_KEY    : Your Zotero API key (required for update-bibtex)
@@ -183,6 +185,27 @@ Environment variables:
     config_create_parser.add_argument("--path", type=Path, help="Path for config file")
 
     config_subparsers.add_parser("show", help="Show current configuration")
+
+    # Install-fonts command
+    fonts_parser = subparsers.add_parser(
+        "install-fonts", help="Download and install fonts for XeLaTeX projects"
+    )
+    fonts_parser.add_argument(
+        "--dir",
+        type=Path,
+        help="Directory to install fonts (default: fonts/)",
+    )
+    fonts_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Re-download fonts even if already installed",
+    )
+    fonts_parser.add_argument(
+        "--list",
+        action="store_true",
+        dest="list_fonts",
+        help="List installed fonts instead of installing",
+    )
 
     return parser
 
@@ -433,6 +456,46 @@ def handle_config_command(args: argparse.Namespace, config: Config) -> int:
         return 1
 
 
+def handle_install_fonts_command(args: argparse.Namespace, config: Config) -> int:
+    """Handle the install-fonts command"""
+    try:
+        from .fonts import FontInstaller, install_fonts_from_config
+
+        fonts_config = config.get_fonts_config()
+
+        # Override directory if specified on command line
+        fonts_dir = (
+            args.dir if args.dir else Path(fonts_config.get("directory", "fonts"))
+        )
+
+        # List installed fonts if requested
+        if args.list_fonts:
+            installer = FontInstaller(fonts_dir=fonts_dir)
+            installed = installer.list_installed()
+
+            if not installed:
+                print_info(f"No fonts installed in {fonts_dir}")
+                return 0
+
+            print_info(f"Installed fonts in {fonts_dir}:")
+            for font_name in installed:
+                font_files = installer.get_font_files(font_name)
+                print(f"  - {font_name} ({len(font_files)} font files)")
+
+            return 0
+
+        # Install fonts
+        sources = fonts_config.get("sources", [])
+        installer = FontInstaller(fonts_dir=fonts_dir, sources=sources)
+
+        success = installer.install_all(force=args.force)
+        return 0 if success else 1
+
+    except Exception as e:
+        print_error(f"Font installation failed: {e}")
+        return 1
+
+
 def main(argv: Optional[list] = None) -> int:
     """
     Main entry point for article-cli
@@ -485,6 +548,9 @@ def main(argv: Optional[list] = None) -> int:
 
         elif args.command == "config":
             return handle_config_command(args, config)
+
+        elif args.command == "install-fonts":
+            return handle_install_fonts_command(args, config)
 
         else:
             print_error(f"Unknown command: {args.command}")
