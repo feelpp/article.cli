@@ -81,8 +81,10 @@ class LaTeXCompiler:
     ) -> bool:
         """Compile document and watch for changes"""
         if engine in ["pdflatex", "xelatex", "lualatex"]:
-            print_error("Watch mode is only supported with latexmk engine. "
-                       "Use: article-cli compile --engine latexmk --watch")
+            print_error(
+                "Watch mode is only supported with latexmk engine. "
+                "Use: article-cli compile --engine latexmk --watch"
+            )
             return False
 
         print_info("Starting watch mode. Press Ctrl+C to stop.")
