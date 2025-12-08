@@ -214,23 +214,12 @@ class Config:
 
     def get_fonts_config(self) -> Dict[str, Any]:
         """Get font installation configuration"""
-        # Default font sources
-        default_sources = [
-            {
-                "name": "Marianne",
-                "url": "https://www.systeme-de-design.gouv.fr/uploads/Marianne_fd0ba9c190.zip",
-                "description": "French government official font",
-            },
-            {
-                "name": "Roboto Mono",
-                "url": "https://fonts.google.com/download?family=Roboto+Mono",
-                "description": "Google's monospace font",
-            },
-        ]
+        # Import default sources from fonts module to keep them in sync
+        from .fonts import DEFAULT_FONT_SOURCES
 
         return {
             "directory": self.get("fonts", "directory", "fonts"),
-            "sources": self.get("fonts", "sources", default_sources),
+            "sources": self.get("fonts", "sources", DEFAULT_FONT_SOURCES),
         }
 
     def get_themes_config(self) -> Dict[str, Any]:

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.2] - 2025-12-08
+
+### Fixed
+- **Config font defaults bug**: config.py was using hardcoded outdated font URLs instead of importing from fonts.py
+- This caused CI to still fail with "Invalid or corrupted zip file" even after v1.3.1 fix
+
 ## [1.3.1] - 2025-12-08
 
 ### Fixed
@@ -189,6 +195,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `article-cli config show` - Show current configuration
 - `article-cli config create` - Create sample configuration
 
+[1.3.2]: https://github.com/feelpp/article.cli/releases/tag/v1.3.2
 [1.3.1]: https://github.com/feelpp/article.cli/releases/tag/v1.3.1
 [1.3.0]: https://github.com/feelpp/article.cli/releases/tag/v1.3.0
 [1.2.0]: https://github.com/feelpp/article.cli/releases/tag/v1.2.0
