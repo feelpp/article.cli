@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.1] - 2025-12-08
+
+### Fixed
+- **Font download fixes**: Switch from `urllib` to `requests` library for better redirect handling
+- **Roboto Mono URL**: Updated to GitHub archive (Google Fonts URL was returning HTML instead of zip)
+- **Added Roboto font**: Include Google's sans-serif font family as default
+- **Marianne font**: Moved to optional sources due to Cloudflare protection on French government website
+
 ## [1.3.0] - 2025-12-08
 
 ### Added
@@ -181,6 +189,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `article-cli config show` - Show current configuration
 - `article-cli config create` - Create sample configuration
 
+[1.3.1]: https://github.com/feelpp/article.cli/releases/tag/v1.3.1
 [1.3.0]: https://github.com/feelpp/article.cli/releases/tag/v1.3.0
 [1.2.0]: https://github.com/feelpp/article.cli/releases/tag/v1.2.0
 [1.1.1]: https://github.com/feelpp/article.cli/releases/tag/v1.1.1
