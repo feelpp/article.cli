@@ -4,13 +4,15 @@
 [![PyPI version](https://badge.fury.io/py/article-cli.svg)](https://badge.fury.io/py/article-cli)
 [![Python Support](https://img.shields.io/pypi/pyversions/article-cli.svg)](https://pypi.org/project/article-cli/)
 
-A command-line tool for managing LaTeX articles with git integration and Zotero bibliography synchronization.
+A command-line tool for managing LaTeX articles and presentations with git integration and Zotero bibliography synchronization.
 
 ## Features
 
-- **Repository Initialization**: Complete setup for LaTeX article projects with one command
-- **LaTeX Compilation**: Compile documents with latexmk/pdflatex, watch mode, shell escape support
-- **GitHub Actions Workflows**: Automated PDF compilation, artifact upload, and GitHub releases
+- **Repository Initialization**: Complete setup for LaTeX article or presentation projects with one command
+- **Project Types**: Support for articles, Beamer presentations, and posters
+- **LaTeX Compilation**: Compile documents with latexmk/pdflatex/xelatex/lualatex, watch mode, shell escape support
+- **Font Installation**: Download and install fonts for XeLaTeX projects (Marianne, Roboto Mono, etc.)
+- **GitHub Actions Workflows**: Automated PDF compilation with XeLaTeX support, artifact upload, and GitHub releases
 - **Git Release Management**: Create, list, and delete releases with gitinfo2 support
 - **Zotero Integration**: Synchronize bibliography from Zotero with robust pagination and error handling
 - **LaTeX Build Management**: Clean build files and manage LaTeX compilation artifacts
@@ -113,6 +115,24 @@ default_branch = "main"
 
 [latex]
 clean_extensions = [".aux", ".bbl", ".blg", ".log", ".out", ".synctex.gz"]
+
+[fonts]
+directory = "fonts"
+
+[fonts.sources]
+marianne = "https://github.com/ArnaudBelcworking/Marianne/archive/refs/heads/master.zip"
+roboto-mono = "https://github.com/googlefonts/RobotoMono/releases/download/v3.000/RobotoMono-v3.000.zip"
+
+[themes]
+directory = "."
+
+# Custom theme sources (numpex is built-in)
+# [themes.sources.my-theme]
+# url = "https://example.com/theme.zip"
+# description = "My custom theme"
+# files = ["beamerthememytheme.sty"]
+# requires_fonts = false
+# engine = "pdflatex"
 ```
 
 ## Usage
@@ -122,6 +142,12 @@ clean_extensions = [".aux", ".bbl", ".blg", ".log", ".out", ".synctex.gz"]
 ```bash
 # Initialize a new article repository (auto-detects main .tex file)
 article-cli init --title "My Article Title" --authors "John Doe,Jane Smith"
+
+# Initialize a Beamer presentation project
+article-cli init --title "My Presentation" --authors "Author" --type presentation
+
+# Initialize with numpex theme (requires theme files from presentation.template.d)
+article-cli init --title "NumPEx Talk" --authors "Author" --type presentation --theme numpex
 
 # Specify custom Zotero group ID
 article-cli init --title "My Article" --authors "Author" --group-id 1234567
@@ -134,11 +160,12 @@ article-cli init --title "My Article" --authors "Author" --force
 ```
 
 The `init` command sets up:
-- **GitHub Actions workflow** for automated PDF compilation and releases
+- **GitHub Actions workflow** for automated PDF compilation and releases (with XeLaTeX support for presentations)
 - **pyproject.toml** with dependencies and article-cli configuration
 - **README.md** with comprehensive documentation
 - **.gitignore** with LaTeX-specific patterns
 - **VS Code configuration** for LaTeX Workshop with auto-build and SyncTeX
+- **Font configuration** (for presentation projects using custom themes)
 
 ### Git Release Management
 
@@ -178,6 +205,12 @@ article-cli compile main.tex
 # Compile with pdflatex engine
 article-cli compile --engine pdflatex
 
+# Compile with XeLaTeX (for custom fonts)
+article-cli compile --engine xelatex
+
+# Compile with LuaLaTeX
+article-cli compile --engine lualatex
+
 # Enable shell escape (for code highlighting, etc.)
 article-cli compile --shell-escape
 
@@ -189,6 +222,64 @@ article-cli compile --clean-first --clean-after
 
 # Specify output directory
 article-cli compile --output-dir build/
+```
+
+### Font Installation
+
+Install fonts for XeLaTeX projects (useful for custom Beamer themes):
+
+```bash
+# Install default fonts (Marianne, Roboto Mono) to fonts/ directory
+article-cli install-fonts
+
+# Install to a custom directory
+article-cli install-fonts --dir custom-fonts/
+
+# Force re-download even if fonts exist
+article-cli install-fonts --force
+
+# List installed fonts
+article-cli install-fonts --list
+```
+
+**Default fonts:**
+- **Marianne**: French government official font
+- **Roboto Mono**: Google's monospace font for code
+
+### Theme Installation
+
+Install Beamer themes for presentations:
+
+```bash
+# List available themes
+article-cli install-theme --list
+
+# Install numpex theme (NumPEx Beamer theme)
+article-cli install-theme numpex
+
+# Install to a custom directory
+article-cli install-theme numpex --dir themes/
+
+# Force re-download even if theme exists
+article-cli install-theme numpex --force
+
+# Install from a custom URL
+article-cli install-theme my-theme --url https://example.com/theme.zip
+```
+
+**Available themes:**
+- **numpex**: NumPEx Beamer theme following French government visual identity (requires XeLaTeX and custom fonts)
+
+**Complete presentation setup:**
+```bash
+# 1. Install the theme
+article-cli install-theme numpex
+
+# 2. Install required fonts
+article-cli install-fonts
+
+# 3. Compile with XeLaTeX
+article-cli compile presentation.tex --engine xelatex
 ```
 
 ### Project Setup
@@ -236,6 +327,22 @@ MIT License - see LICENSE file for details.
 5. Open a Pull Request
 
 ## Changelog
+
+### v1.2.0
+- Add font installation command (`install-fonts`) for XeLaTeX projects
+- Support Marianne and Roboto Mono fonts by default
+- Add theme installation command (`install-theme`) for Beamer presentations
+- Built-in support for numpex theme with automatic download
+- Extended GitHub Actions workflow with XeLaTeX and multi-document support
+- Add presentation project type with Beamer template support
+- Add `--engine` option for xelatex and lualatex compilation
+- Improved CI/CD with font installation steps
+
+### v1.1.0
+- Add `init` command for repository initialization
+- Add `compile` command with watch mode and multiple engines
+- GitHub Actions workflow generation
+- VS Code configuration generation
 
 ### v1.0.0
 - Initial release

@@ -233,6 +233,29 @@ class Config:
             "sources": self.get("fonts", "sources", default_sources),
         }
 
+    def get_themes_config(self) -> Dict[str, Any]:
+        """Get theme installation configuration"""
+        # Default theme sources
+        default_sources = {
+            "numpex": {
+                "url": "https://github.com/numpex/presentation.template.d/archive/refs/heads/main.zip",
+                "description": "NumPEx Beamer theme following French government visual identity",
+                "files": [
+                    "beamerthemenumpex.sty",
+                    "beamercolorthemenumpex.sty",
+                    "beamerfontthemenumpex.sty",
+                ],
+                "directories": ["images"],
+                "requires_fonts": True,
+                "engine": "xelatex",
+            },
+        }
+
+        return {
+            "directory": self.get("themes", "directory", "."),
+            "sources": self.get("themes", "sources", default_sources),
+        }
+
     def validate_zotero_config(
         self, args: argparse.Namespace
     ) -> Dict[str, Optional[str]]:
@@ -399,6 +422,20 @@ directory = "fonts"
 # name = "Roboto Mono"
 # url = "https://fonts.google.com/download?family=Roboto+Mono"
 # description = "Google's monospace font"
+
+# Theme installation settings (for Beamer presentations)
+[themes]
+# Directory to install themes (default: current directory)
+directory = "."
+
+# Theme sources (default: numpex theme)
+# [themes.sources.numpex]
+# url = "https://github.com/numpex/presentation.template.d/archive/refs/heads/main.zip"
+# description = "NumPEx Beamer theme"
+# files = ["beamerthemenumpex.sty", "beamercolorthemenumpex.sty", "beamerfontthemenumpex.sty"]
+# directories = ["images"]
+# requires_fonts = true
+# engine = "xelatex"
 """
 
         try:
