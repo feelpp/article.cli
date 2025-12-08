@@ -212,6 +212,27 @@ class Config:
             "columns": self.get("poster", "columns", 3),
         }
 
+    def get_fonts_config(self) -> Dict[str, Any]:
+        """Get font installation configuration"""
+        # Default font sources
+        default_sources = [
+            {
+                "name": "Marianne",
+                "url": "https://www.systeme-de-design.gouv.fr/uploads/Marianne_fd0ba9c190.zip",
+                "description": "French government official font",
+            },
+            {
+                "name": "Roboto Mono",
+                "url": "https://fonts.google.com/download?family=Roboto+Mono",
+                "description": "Google's monospace font",
+            },
+        ]
+
+        return {
+            "directory": self.get("fonts", "directory", "fonts"),
+            "sources": self.get("fonts", "sources", default_sources),
+        }
+
     def validate_zotero_config(
         self, args: argparse.Namespace
     ) -> Dict[str, Optional[str]]:
@@ -361,6 +382,23 @@ main = "main.tex"
 
 # Whether to install custom fonts in CI environment
 # install_fonts = true
+
+# Font installation settings (for XeLaTeX projects)
+[fonts]
+# Directory to install fonts
+directory = "fonts"
+
+# Font sources to download (default: Marianne and Roboto Mono)
+# You can customize this list or add your own fonts
+# [[fonts.sources]]
+# name = "Marianne"
+# url = "https://www.systeme-de-design.gouv.fr/uploads/Marianne_fd0ba9c190.zip"
+# description = "French government official font"
+#
+# [[fonts.sources]]
+# name = "Roboto Mono"
+# url = "https://fonts.google.com/download?family=Roboto+Mono"
+# description = "Google's monospace font"
 """
 
         try:
