@@ -4,11 +4,11 @@ build-backend = "hatchling.build"
 
 [project]
 name = "article-cli"
-version = "1.3.2"
+version = "1.4.0"
 authors = [
     {name = "Christophe Prud'homme", email = "prudhomm@cemosis.fr"},
 ]
-description = "CLI tool for managing LaTeX articles with git integration and Zotero bibliography"
+description = "CLI tool for managing LaTeX and Typst documents with git integration and Zotero bibliography"
 readme = "README.md"
 license = {file = "LICENSE"}
 requires-python = ">=3.8"
@@ -26,7 +26,7 @@ classifiers = [
     "Topic :: Scientific/Engineering",
     "Topic :: Text Processing :: Markup :: LaTeX",
 ]
-keywords = ["latex", "git", "zotero", "bibliography", "academic", "research"]
+keywords = ["latex", "typst", "git", "zotero", "bibliography", "academic", "research", "presentations"]
 dependencies = [
     "requests>=2.28.0",
 ]

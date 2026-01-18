@@ -20,11 +20,14 @@ from .zotero import print_error, print_info, print_success, print_warning
 DEFAULT_THEME_SOURCES: Dict[str, Dict[str, Any]] = {
     "numpex": {
         "url": "https://github.com/numpex/presentation.template.d/archive/refs/heads/main.zip",
-        "description": "NumPEx Beamer theme following French government visual identity",
+        "description": "NumPEx Beamer/Typst theme following French government visual identity",
         "files": [
             "beamerthemenumpex.sty",
             "beamercolorthemenumpex.sty",
             "beamerfontthemenumpex.sty",
+        ],
+        "typst_files": [
+            "numpex.typ",
         ],
         "directories": ["images"],
         "requires_fonts": True,
@@ -121,7 +124,11 @@ class ThemeInstaller:
 
         theme_info = self.sources[name]
         theme_files = theme_info.get("files", [])
+        typst_files = theme_info.get("typst_files", [])
         theme_dirs = theme_info.get("directories", [])
+
+        # Combine LaTeX and Typst files for extraction
+        all_files = theme_files + typst_files
 
         # Check if already installed
         if theme_files and not force:
@@ -141,7 +148,7 @@ class ThemeInstaller:
             print_info(f"  {description}")
 
         try:
-            self._download_and_extract_theme(name, url, theme_files, theme_dirs)
+            self._download_and_extract_theme(name, url, all_files, theme_dirs)
             print_success(f"Theme '{name}' installed successfully")
 
             # Show additional info
@@ -360,10 +367,10 @@ class ThemeInstaller:
     def _print_usage_instructions(self, name: str) -> None:
         """Print instructions for using installed theme"""
         print_info("")
-        print_info("To use this theme in your presentation:")
+        print_info("To use this theme in your LaTeX presentation:")
         print_info(f"  \\usetheme{{{name}}}")
         print_info("")
-        print_info("Example document:")
+        print_info("Example LaTeX document:")
         print_info("  \\documentclass[aspectratio=169]{beamer}")
         print_info(f"  \\usetheme{{{name}}}")
         print_info("  \\title{Your Title}")
@@ -371,6 +378,10 @@ class ThemeInstaller:
         print_info("  \\begin{document}")
         print_info("  \\maketitle")
         print_info("  \\end{document}")
+        print_info("")
+        print_info("To use this theme in Typst:")
+        print_info(f'  #import "{name}.typ": *')
+        print_info(f"  #show: {name}-theme.with(title: \"Your Title\", author: \"Your Name\")")
 
 
 def get_available_themes() -> Dict[str, Dict[str, Any]]:

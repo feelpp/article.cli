@@ -234,6 +234,9 @@ class Config:
                     "beamercolorthemenumpex.sty",
                     "beamerfontthemenumpex.sty",
                 ],
+                "typst_files": [
+                    "numpex.typ",
+                ],
                 "directories": ["images"],
                 "requires_fonts": True,
                 "engine": "xelatex",
@@ -243,6 +246,13 @@ class Config:
         return {
             "directory": self.get("themes", "directory", "."),
             "sources": self.get("themes", "sources", default_sources),
+        }
+
+    def get_typst_config(self) -> Dict[str, Any]:
+        """Get Typst-specific configuration"""
+        return {
+            "font_paths": self.get("typst", "font_paths", []),
+            "build_dir": self.get("typst", "build_dir", ""),
         }
 
     def validate_zotero_config(
@@ -422,9 +432,18 @@ directory = "."
 # url = "https://github.com/numpex/presentation.template.d/archive/refs/heads/main.zip"
 # description = "NumPEx Beamer theme"
 # files = ["beamerthemenumpex.sty", "beamercolorthemenumpex.sty", "beamerfontthemenumpex.sty"]
+# typst_files = ["numpex.typ"]
 # directories = ["images"]
 # requires_fonts = true
 # engine = "xelatex"
+
+# Typst compilation settings
+[typst]
+# Font paths for Typst compiler (relative to project root)
+# font_paths = ["fonts/Marianne/desktop", "fonts/Roboto/static"]
+
+# Output directory for Typst builds
+# build_dir = "build/typst"
 """
 
         try:

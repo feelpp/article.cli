@@ -172,23 +172,27 @@ class RepositorySetup:
         aspect_ratio: str = "169",
     ) -> Optional[str]:
         """
-        Detect main .tex file in repository or create one if missing
+        Detect main .tex/.typ file in repository or create one if missing
 
         Args:
             specified: User-specified filename (takes priority)
-            title: Document title (for creating new .tex file)
-            authors: List of author names (for creating new .tex file)
+            title: Document title (for creating new file)
+            authors: List of author names (for creating new file)
             force: Overwrite existing file if True
-            project_type: Type of project ("article", "presentation", "poster")
-            theme: Beamer theme for presentations
+            project_type: Type of project ("article", "presentation", "poster", "typst-presentation")
+            theme: Beamer/Typst theme for presentations
             aspect_ratio: Aspect ratio for presentations
 
         Returns:
-            Main .tex filename or None on failure
+            Main document filename or None on failure
         """
+        # Handle Typst project types
+        is_typst = project_type.startswith("typst-")
+        file_ext = ".typ" if is_typst else ".tex"
+
         if specified:
-            tex_path = self.repo_path / specified
-            if tex_path.exists():
+            doc_path = self.repo_path / specified
+            if doc_path.exists():
                 return specified
             # Specified file doesn't exist - create it
             if self._create_tex_file(
@@ -197,44 +201,45 @@ class RepositorySetup:
                 return specified
             return None
 
-        # Auto-detect .tex files
-        tex_files = list(self.repo_path.glob("*.tex"))
+        # Auto-detect files
+        doc_files = list(self.repo_path.glob(f"*{file_ext}"))
 
-        if not tex_files:
-            # No .tex files found - create default based on project type
-            if project_type == "presentation":
-                default_name = "presentation.tex"
-            elif project_type == "poster":
-                default_name = "poster.tex"
+        if not doc_files:
+            # No files found - create default based on project type
+            if project_type in ("presentation", "typst-presentation"):
+                default_name = f"presentation{file_ext}"
+            elif project_type in ("poster", "typst-poster"):
+                default_name = f"poster{file_ext}"
             else:
-                default_name = "main.tex"
-            print_info(f"No .tex file found, creating {default_name}")
+                default_name = f"main{file_ext}"
+            print_info(f"No {file_ext} file found, creating {default_name}")
             if self._create_tex_file(
                 default_name, title, authors, force, project_type, theme, aspect_ratio
             ):
                 return default_name
             return None
 
-        if len(tex_files) == 1:
-            return tex_files[0].name
+        if len(doc_files) == 1:
+            return doc_files[0].name
 
-        # Multiple .tex files - prefer common patterns
-        for pattern in [
-            "main.tex",
-            "article.tex",
-            "presentation.tex",
-            "poster.tex",
-            f"{self.repo_path.name}.tex",
-        ]:
+        # Multiple files - prefer common patterns
+        patterns = [
+            f"main{file_ext}",
+            f"article{file_ext}",
+            f"presentation{file_ext}",
+            f"poster{file_ext}",
+            f"{self.repo_path.name}{file_ext}",
+        ]
+        for pattern in patterns:
             if (self.repo_path / pattern).exists():
                 return pattern
 
-        # Return first .tex file found
+        # Return first file found
         print_info(
-            f"Multiple .tex files found, using: {tex_files[0].name} "
+            f"Multiple {file_ext} files found, using: {doc_files[0].name} "
             "(use --tex-file to specify different file)"
         )
-        return tex_files[0].name
+        return doc_files[0].name
 
     def _create_tex_file(
         self,
@@ -247,40 +252,58 @@ class RepositorySetup:
         aspect_ratio: str = "169",
     ) -> bool:
         """
-        Create a LaTeX file based on project type
+        Create a LaTeX or Typst file based on project type
 
         Args:
-            filename: Name of the .tex file to create
+            filename: Name of the file to create (.tex or .typ)
             title: Document title
             authors: List of author names
             force: Overwrite if exists
-            project_type: Type of project ("article", "presentation", "poster")
-            theme: Beamer theme for presentations
+            project_type: Type of project ("article", "presentation", "poster", "typst-presentation")
+            theme: Beamer/Typst theme for presentations
             aspect_ratio: Aspect ratio for presentations
 
         Returns:
             True if successful
         """
-        tex_path = self.repo_path / filename
+        doc_path = self.repo_path / filename
 
-        if tex_path.exists() and not force:
+        if doc_path.exists() and not force:
             print_info(f"{filename} already exists (use --force to overwrite)")
             return True
 
-        # Format authors for LaTeX
-        authors_latex = " \\\\and ".join(authors)
+        # Determine if this is a Typst project
+        is_typst = project_type.startswith("typst-") or filename.endswith(".typ")
 
-        if project_type == "presentation":
-            tex_content = self._get_presentation_template(
-                title, authors_latex, theme, aspect_ratio
-            )
-        elif project_type == "poster":
-            tex_content = self._get_poster_template(title, authors_latex)
+        if is_typst:
+            # Format authors for Typst
+            authors_typst = ", ".join([f'"{author}"' for author in authors])
+
+            if project_type in ("typst-presentation", "presentation") and filename.endswith(".typ"):
+                doc_content = self._get_typst_presentation_template(
+                    title, authors_typst, theme
+                )
+            elif project_type in ("typst-poster", "poster") and filename.endswith(".typ"):
+                doc_content = self._get_typst_poster_template(title, authors_typst)
+            else:
+                doc_content = self._get_typst_presentation_template(
+                    title, authors_typst, theme
+                )
         else:
-            tex_content = self._get_article_template(title, authors_latex)
+            # Format authors for LaTeX
+            authors_latex = " \\\\and ".join(authors)
 
-        tex_path.write_text(tex_content)
-        print_success(f"Created: {tex_path.relative_to(self.repo_path)}")
+            if project_type == "presentation":
+                doc_content = self._get_presentation_template(
+                    title, authors_latex, theme, aspect_ratio
+                )
+            elif project_type == "poster":
+                doc_content = self._get_poster_template(title, authors_latex)
+            else:
+                doc_content = self._get_article_template(title, authors_latex)
+
+        doc_path.write_text(doc_content)
+        print_success(f"Created: {doc_path.relative_to(self.repo_path)}")
         return True
 
     def _get_article_template(self, title: str, authors_latex: str) -> str:
@@ -478,6 +501,230 @@ Branch: \\gitBranch
 }}
 
 \\end{{document}}
+"""
+
+    def _get_typst_presentation_template(
+        self, title: str, authors_typst: str, theme: str
+    ) -> str:
+        """Get Typst presentation template content"""
+        if theme:
+            theme_import = f'#import "{theme}.typ": *'
+            theme_show = f"#show: {theme}-theme.with("
+        else:
+            theme_import = "// No theme specified - using basic Typst presentation"
+            theme_show = "#set page(paper: \"presentation-16-9\")\n#set text(size: 24pt)\n\n// Document metadata\n#let title = "
+
+        if theme:
+            return f"""{theme_import}
+
+{theme_show}
+  title: "{title}",
+  author: [{authors_typst}],
+  date: datetime.today().display("[month repr:long] [day], [year]"),
+  institution: "Your Institution",
+)
+
+// Title slide is automatically generated by the theme
+
+#slide(title: "Outline")[
+  #outline()
+]
+
+= Introduction
+
+#slide(title: "Introduction")[
+  - First point
+  - Second point
+  - Third point
+]
+
+= Main Content
+
+#slide(title: "Main Content")[
+  Your main content goes here.
+]
+
+= Conclusion
+
+#slide(title: "Conclusion")[
+  - Summary point 1
+  - Summary point 2
+]
+
+#slide(title: "Questions?")[
+  #align(center)[
+    #text(size: 36pt)[Thank you for your attention!]
+  ]
+]
+"""
+        else:
+            return f"""// Typst Presentation
+// Title: {title}
+// Authors: {authors_typst}
+
+#set page(paper: "presentation-16-9", margin: 2cm)
+#set text(font: "Helvetica Neue", size: 24pt)
+
+// Title slide
+#page[
+  #align(center + horizon)[
+    #text(size: 48pt, weight: "bold")[{title}]
+
+    #v(1cm)
+
+    #text(size: 28pt)[{authors_typst.replace('"', '')}]
+
+    #v(0.5cm)
+
+    Your Institution
+
+    #v(0.5cm)
+
+    #datetime.today().display("[month repr:long] [day], [year]")
+  ]
+]
+
+// Introduction
+#page[
+  #text(size: 36pt, weight: "bold")[Introduction]
+
+  #v(1cm)
+
+  - First point
+  - Second point
+  - Third point
+]
+
+// Main Content
+#page[
+  #text(size: 36pt, weight: "bold")[Main Content]
+
+  #v(1cm)
+
+  Your main content goes here.
+]
+
+// Conclusion
+#page[
+  #text(size: 36pt, weight: "bold")[Conclusion]
+
+  #v(1cm)
+
+  - Summary point 1
+  - Summary point 2
+]
+
+// Questions
+#page[
+  #align(center + horizon)[
+    #text(size: 48pt)[Questions?]
+
+    #v(1cm)
+
+    Thank you for your attention!
+  ]
+]
+"""
+
+    def _get_typst_poster_template(self, title: str, authors_typst: str) -> str:
+        """Get Typst poster template content"""
+        return f"""// Typst Poster
+// Title: {title}
+// Authors: {authors_typst}
+
+#set page(paper: "a0", margin: 2cm)
+#set text(font: "Helvetica Neue", size: 24pt)
+
+// Header
+#align(center)[
+  #text(size: 72pt, weight: "bold")[{title}]
+
+  #v(1cm)
+
+  #text(size: 36pt)[{authors_typst.replace('"', '')}]
+
+  #text(size: 28pt)[Your Institution]
+]
+
+#v(2cm)
+
+#columns(3, gutter: 2cm)[
+  // Column 1
+  #block(
+    fill: rgb("#f0f0f0"),
+    inset: 1cm,
+    radius: 10pt,
+    width: 100%,
+  )[
+    #text(size: 36pt, weight: "bold")[Introduction]
+
+    #v(0.5cm)
+
+    Your introduction goes here.
+  ]
+
+  #v(1cm)
+
+  #block(
+    fill: rgb("#f0f0f0"),
+    inset: 1cm,
+    radius: 10pt,
+    width: 100%,
+  )[
+    #text(size: 36pt, weight: "bold")[Methods]
+
+    #v(0.5cm)
+
+    Your methods description goes here.
+  ]
+
+  #colbreak()
+
+  // Column 2
+  #block(
+    fill: rgb("#f0f0f0"),
+    inset: 1cm,
+    radius: 10pt,
+    width: 100%,
+  )[
+    #text(size: 36pt, weight: "bold")[Results]
+
+    #v(0.5cm)
+
+    Your results go here.
+  ]
+
+  #colbreak()
+
+  // Column 3
+  #block(
+    fill: rgb("#f0f0f0"),
+    inset: 1cm,
+    radius: 10pt,
+    width: 100%,
+  )[
+    #text(size: 36pt, weight: "bold")[Conclusions]
+
+    #v(0.5cm)
+
+    Your conclusions go here.
+  ]
+
+  #v(1cm)
+
+  #block(
+    fill: rgb("#e8f4ea"),
+    inset: 1cm,
+    radius: 10pt,
+    width: 100%,
+  )[
+    #text(size: 36pt, weight: "bold")[References]
+
+    #v(0.5cm)
+
+    Your references go here.
+  ]
+]
 """
 
     def _create_directories(self) -> None:

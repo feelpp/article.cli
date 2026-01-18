@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-01-18
+
+### Added
+- **Typst Support**: Full support for Typst document compilation
+  - New `TypstCompiler` class for Typst document compilation
+  - `article-cli compile presentation.typ` - Compile Typst documents
+  - `article-cli compile --engine typst --watch` - Watch mode for Typst
+  - `article-cli compile --font-path fonts/` - Custom font paths for Typst
+  - Auto-detection of `.typ` files and automatic engine selection
+  - Font path configuration via `[typst]` section in config
+- **Typst Project Types**: Initialize Typst projects with templates
+  - `article-cli init --type typst-presentation` - Create Typst presentation
+  - `article-cli init --type typst-poster` - Create Typst poster
+  - Theme support for Typst presentations (e.g., numpex theme)
+- **Enhanced Theme Installation**: Themes now include Typst files
+  - `numpex.typ` included alongside LaTeX `.sty` files
+  - Usage instructions shown for both LaTeX and Typst
+- New `get_typst_config()` method in Config class
+- 23 new tests for Typst functionality
+
+### Changed
+- Theme sources now include `typst_files` list alongside `files`
+- Updated CLI help with Typst examples
+- Description updated to mention Typst support
+
 ## [1.3.2] - 2025-12-08
 
 ### Fixed
@@ -195,6 +220,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `article-cli config show` - Show current configuration
 - `article-cli config create` - Create sample configuration
 
+[1.4.0]: https://github.com/feelpp/article.cli/releases/tag/v1.4.0
 [1.3.2]: https://github.com/feelpp/article.cli/releases/tag/v1.3.2
 [1.3.1]: https://github.com/feelpp/article.cli/releases/tag/v1.3.1
 [1.3.0]: https://github.com/feelpp/article.cli/releases/tag/v1.3.0
