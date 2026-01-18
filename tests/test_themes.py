@@ -7,7 +7,6 @@ import tempfile
 import zipfile
 from pathlib import Path
 from unittest.mock import patch, MagicMock
-from io import BytesIO
 
 from article_cli.themes import (
     ThemeInstaller,
@@ -286,6 +285,72 @@ class TestDefaultThemeSources:
         """Test numpex theme specifies xelatex engine"""
         numpex = DEFAULT_THEME_SOURCES["numpex"]
         assert numpex.get("engine") == "xelatex"
+
+    def test_numpex_theme_has_typst_files(self):
+        """Test numpex theme specifies Typst files"""
+        numpex = DEFAULT_THEME_SOURCES["numpex"]
+        assert "typst_files" in numpex
+        typst_files = numpex["typst_files"]
+        assert "numpex.typ" in typst_files
+
+
+class TestTypstThemeSupport:
+    """Tests for Typst theme support"""
+
+    def test_extract_typst_files(self):
+        """Test extracting Typst files from archive"""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+
+            # Create test zip with Typst and LaTeX files
+            zip_path = tmp_path / "test.zip"
+            with zipfile.ZipFile(zip_path, "w") as zf:
+                zf.writestr("repo-main/beamerthemenumpex.sty", "% LaTeX style")
+                zf.writestr("repo-main/numpex.typ", "// Typst theme")
+                zf.writestr("repo-main/other.txt", "other")
+
+            output_dir = tmp_path / "output"
+            output_dir.mkdir()
+
+            installer = ThemeInstaller(themes_dir=output_dir)
+            installer._extract_theme_files(
+                zip_path, ["beamerthemenumpex.sty", "numpex.typ"], []
+            )
+
+            # Both files should be extracted
+            assert (output_dir / "beamerthemenumpex.sty").exists()
+            assert (output_dir / "numpex.typ").exists()
+            assert not (output_dir / "other.txt").exists()
+
+    def test_install_theme_includes_typst_files(self):
+        """Test that install_theme extracts both LaTeX and Typst files"""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+
+            # Create theme with Typst files
+            custom_sources = {
+                "test-theme": {
+                    "url": "https://example.com/theme.zip",
+                    "description": "Test theme",
+                    "files": ["theme.sty"],
+                    "typst_files": ["theme.typ"],
+                    "directories": [],
+                }
+            }
+
+            installer = ThemeInstaller(themes_dir=tmp_path, sources=custom_sources)
+
+            # Mock the download
+            with patch.object(
+                installer, "_download_and_extract_theme"
+            ) as mock_download:
+                installer.install_theme("test-theme", force=True)
+
+                # Check that all_files includes both LaTeX and Typst files
+                call_args = mock_download.call_args
+                all_files = call_args[0][2]  # Third positional argument
+                assert "theme.sty" in all_files
+                assert "theme.typ" in all_files
 
 
 class TestHelperFunctions:

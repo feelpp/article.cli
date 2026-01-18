@@ -31,6 +31,9 @@ Examples:
   %(prog)s compile --engine pdflatex      # Compile with pdflatex
   %(prog)s compile --shell-escape         # Enable shell escape
   %(prog)s compile --watch                # Watch and auto-recompile
+  %(prog)s compile presentation.typ       # Compile Typst document
+  %(prog)s compile --engine typst --watch # Watch Typst file
+  %(prog)s compile --font-path fonts/     # Typst with custom fonts
   %(prog)s create v1.0.0                  # Create release v1.0.0
   %(prog)s list --count 10                # List 10 recent releases
   %(prog)s delete v1.0.0                  # Delete release
@@ -38,7 +41,7 @@ Examples:
   %(prog)s config create                  # Create sample config file
   %(prog)s install-fonts                  # Install fonts for XeLaTeX
   %(prog)s install-fonts --list           # List installed fonts
-  %(prog)s install-theme numpex           # Install numpex Beamer theme
+  %(prog)s install-theme numpex           # Install numpex Beamer/Typst theme
   %(prog)s install-theme --list           # List available themes
 
 Environment variables:
@@ -82,14 +85,20 @@ Environment variables:
     )
     init_parser.add_argument(
         "--type",
-        choices=["article", "presentation", "poster"],
+        choices=[
+            "article",
+            "presentation",
+            "poster",
+            "typst-presentation",
+            "typst-poster",
+        ],
         default="article",
-        help="Project type (default: article). Use 'presentation' for Beamer slides.",
+        help="Project type (default: article). Use 'presentation' for Beamer, 'typst-presentation' for Typst slides.",
     )
     init_parser.add_argument(
         "--theme",
         default="",
-        help="Beamer theme for presentations (e.g., 'numpex', 'metropolis').",
+        help="Theme for presentations (e.g., 'numpex'). Works with both Beamer and Typst.",
     )
     init_parser.add_argument(
         "--aspect-ratio",
@@ -111,13 +120,19 @@ Environment variables:
     compile_parser.add_argument(
         "tex_file",
         nargs="?",
-        help="LaTeX file to compile (auto-detected if not specified)",
+        help="Document file to compile (.tex or .typ, auto-detected if not specified)",
     )
     compile_parser.add_argument(
         "--engine",
-        choices=["latexmk", "pdflatex", "xelatex", "lualatex"],
+        choices=["latexmk", "pdflatex", "xelatex", "lualatex", "typst"],
         default="latexmk",
-        help="LaTeX engine to use (default: latexmk). Use xelatex/lualatex for custom fonts.",
+        help="Compilation engine (default: latexmk). Use typst for .typ files, xelatex/lualatex for custom fonts.",
+    )
+    compile_parser.add_argument(
+        "--font-path",
+        action="append",
+        dest="font_paths",
+        help="Additional font path for Typst (can be specified multiple times)",
     )
     compile_parser.add_argument(
         "--shell-escape",
@@ -294,48 +309,82 @@ def handle_clean_command(config: Config) -> int:
 def handle_compile_command(args: argparse.Namespace, config: Config) -> int:
     """Handle the compile command"""
     try:
-        from .latex_compiler import LaTeXCompiler
+        # Determine engine from args or auto-detect from file extension
+        engine = args.engine
+        doc_file = args.tex_file
 
-        # Auto-detect tex file if not provided
-        tex_file = args.tex_file
-        if not tex_file:
-            tex_file = _auto_detect_tex_file()
-            if not tex_file:
+        # Auto-detect file if not provided
+        if not doc_file:
+            # If engine is typst, look for .typ files first
+            if engine == "typst":
+                doc_file = _auto_detect_typ_file()
+                if not doc_file:
+                    doc_file = _auto_detect_tex_file()
+            else:
+                doc_file = _auto_detect_tex_file()
+                if not doc_file:
+                    doc_file = _auto_detect_typ_file()
+
+            if not doc_file:
                 print_error(
-                    "No .tex file specified and none found in current directory"
+                    "No .tex or .typ file specified and none found in current directory"
                 )
                 return 1
 
-        # Validate tex file exists
-        tex_path = Path(tex_file)
-        if not tex_path.exists():
-            print_error(f"LaTeX file not found: {tex_file}")
+        # Validate file exists
+        doc_path = Path(doc_file)
+        if not doc_path.exists():
+            print_error(f"Document file not found: {doc_file}")
             return 1
 
-        compiler = LaTeXCompiler(config)
+        # Auto-detect engine from file extension if not explicitly set to typst
+        if doc_path.suffix == ".typ" and engine != "typst":
+            print_info(f"Detected Typst file, switching engine to typst")
+            engine = "typst"
+        elif doc_path.suffix == ".tex" and engine == "typst":
+            print_error(f"Cannot use Typst engine with .tex file: {doc_file}")
+            return 1
 
-        # Clean before compilation if requested
-        if args.clean_first:
-            print_info("Cleaning build files before compilation...")
-            git_manager = GitManager()
-            latex_config = config.get_latex_config()
-            git_manager.clean_latex_files(latex_config["clean_extensions"])
+        # Use appropriate compiler
+        if engine == "typst":
+            from .typst_compiler import TypstCompiler
 
-        # Compile the document
-        success = compiler.compile(
-            tex_file=tex_file,
-            engine=args.engine,
-            shell_escape=args.shell_escape,
-            output_dir=args.output_dir,
-            watch=args.watch,
-        )
+            typst_compiler = TypstCompiler(config)
 
-        # Clean after compilation if requested
-        if args.clean_after and success:
-            print_info("Cleaning build files after compilation...")
-            git_manager = GitManager()
-            latex_config = config.get_latex_config()
-            git_manager.clean_latex_files(latex_config["clean_extensions"])
+            # Compile the document
+            success = typst_compiler.compile(
+                typ_file=doc_file,
+                output_dir=args.output_dir,
+                font_paths=args.font_paths,
+                watch=args.watch,
+            )
+        else:
+            from .latex_compiler import LaTeXCompiler
+
+            latex_compiler = LaTeXCompiler(config)
+
+            # Clean before compilation if requested
+            if args.clean_first:
+                print_info("Cleaning build files before compilation...")
+                git_manager = GitManager()
+                latex_config = config.get_latex_config()
+                git_manager.clean_latex_files(latex_config["clean_extensions"])
+
+            # Compile the document
+            success = latex_compiler.compile(
+                tex_file=doc_file,
+                engine=engine,
+                shell_escape=args.shell_escape,
+                output_dir=args.output_dir,
+                watch=args.watch,
+            )
+
+            # Clean after compilation if requested
+            if args.clean_after and success:
+                print_info("Cleaning build files after compilation...")
+                git_manager = GitManager()
+                latex_config = config.get_latex_config()
+                git_manager.clean_latex_files(latex_config["clean_extensions"])
 
         return 0 if success else 1
 
@@ -363,6 +412,32 @@ def _auto_detect_tex_file() -> Optional[str]:
     # Return first .tex file found
     print_info(f"Multiple .tex files found, using: {tex_files[0].name}")
     return tex_files[0].name
+
+
+def _auto_detect_typ_file() -> Optional[str]:
+    """Auto-detect main .typ file in current directory"""
+    current_dir = Path.cwd()
+    typ_files = list(current_dir.glob("*.typ"))
+
+    if not typ_files:
+        return None
+
+    if len(typ_files) == 1:
+        return typ_files[0].name
+
+    # Multiple .typ files - prefer common patterns
+    for pattern in [
+        "main.typ",
+        "presentation.typ",
+        "presentation.template.typ",
+        f"{current_dir.name}.typ",
+    ]:
+        if (current_dir / pattern).exists():
+            return pattern
+
+    # Return first .typ file found
+    print_info(f"Multiple .typ files found, using: {typ_files[0].name}")
+    return typ_files[0].name
 
 
 def handle_create_command(args: argparse.Namespace, config: Config) -> int:
@@ -491,7 +566,7 @@ def handle_config_command(args: argparse.Namespace, config: Config) -> int:
 def handle_install_fonts_command(args: argparse.Namespace, config: Config) -> int:
     """Handle the install-fonts command"""
     try:
-        from .fonts import FontInstaller, install_fonts_from_config
+        from .fonts import FontInstaller
 
         fonts_config = config.get_fonts_config()
 

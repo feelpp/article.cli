@@ -4,13 +4,14 @@
 [![PyPI version](https://badge.fury.io/py/article-cli.svg)](https://badge.fury.io/py/article-cli)
 [![Python Support](https://img.shields.io/pypi/pyversions/article-cli.svg)](https://pypi.org/project/article-cli/)
 
-A command-line tool for managing LaTeX articles and presentations with git integration and Zotero bibliography synchronization.
+A command-line tool for managing LaTeX and Typst documents with git integration and Zotero bibliography synchronization.
 
 ## Features
 
-- **Repository Initialization**: Complete setup for LaTeX article or presentation projects with one command
-- **Project Types**: Support for articles, Beamer presentations, and posters
+- **Repository Initialization**: Complete setup for LaTeX or Typst projects with one command
+- **Project Types**: Support for articles, Beamer presentations, posters, and Typst documents
 - **LaTeX Compilation**: Compile documents with latexmk/pdflatex/xelatex/lualatex, watch mode, shell escape support
+- **Typst Compilation**: Full support for Typst documents with watch mode and custom font paths
 - **Font Installation**: Download and install fonts for XeLaTeX projects (Marianne, Roboto Mono, etc.)
 - **GitHub Actions Workflows**: Automated PDF compilation with XeLaTeX support, artifact upload, and GitHub releases
 - **Git Release Management**: Create, list, and delete releases with gitinfo2 support
@@ -131,8 +132,13 @@ directory = "."
 # url = "https://example.com/theme.zip"
 # description = "My custom theme"
 # files = ["beamerthememytheme.sty"]
+# typst_files = ["mytheme.typ"]
 # requires_fonts = false
 # engine = "pdflatex"
+
+[typst]
+font_paths = ["fonts/", "~/.fonts/"]
+build_dir = "build"
 ```
 
 ## Usage
@@ -148,6 +154,12 @@ article-cli init --title "My Presentation" --authors "Author" --type presentatio
 
 # Initialize with numpex theme (requires theme files from presentation.template.d)
 article-cli init --title "NumPEx Talk" --authors "Author" --type presentation --theme numpex
+
+# Initialize a Typst presentation project
+article-cli init --title "My Typst Talk" --authors "Author" --type typst-presentation
+
+# Initialize a Typst poster project
+article-cli init --title "My Typst Poster" --authors "Author" --type typst-poster
 
 # Specify custom Zotero group ID
 article-cli init --title "My Article" --authors "Author" --group-id 1234567
@@ -224,6 +236,32 @@ article-cli compile --clean-first --clean-after
 article-cli compile --output-dir build/
 ```
 
+### Typst Compilation
+
+```bash
+# Compile a Typst document (auto-detects .typ files)
+article-cli compile presentation.typ
+
+# Compile with explicit Typst engine
+article-cli compile --engine typst document.typ
+
+# Watch for changes and auto-recompile
+article-cli compile presentation.typ --watch
+
+# Specify custom font paths
+article-cli compile presentation.typ --font-path fonts/
+
+# Multiple font paths
+article-cli compile presentation.typ --font-path fonts/ --font-path ~/.fonts/
+
+# Specify output directory
+article-cli compile presentation.typ --output-dir build/
+```
+
+**Note:** The engine is automatically detected from the file extension:
+- `.tex` files use LaTeX engines (latexmk by default)
+- `.typ` files use the Typst engine
+
 ### Font Installation
 
 Install fonts for XeLaTeX projects (useful for custom Beamer themes):
@@ -268,9 +306,11 @@ article-cli install-theme my-theme --url https://example.com/theme.zip
 ```
 
 **Available themes:**
-- **numpex**: NumPEx Beamer theme following French government visual identity (requires XeLaTeX and custom fonts)
+- **numpex**: NumPEx theme following French government visual identity
+  - LaTeX: Beamer theme files (requires XeLaTeX and custom fonts)
+  - Typst: `numpex.typ` theme file for Typst presentations
 
-**Complete presentation setup:**
+**Complete LaTeX presentation setup:**
 ```bash
 # 1. Install the theme
 article-cli install-theme numpex
@@ -280,6 +320,15 @@ article-cli install-fonts
 
 # 3. Compile with XeLaTeX
 article-cli compile presentation.tex --engine xelatex
+```
+
+**Complete Typst presentation setup:**
+```bash
+# 1. Install the theme (includes numpex.typ)
+article-cli install-theme numpex
+
+# 2. Compile with Typst
+article-cli compile presentation.typ --font-path fonts/
 ```
 
 ### Project Setup
@@ -313,6 +362,7 @@ Release versions must follow the semantic versioning format:
 - Python 3.8+
 - Git repository with gitinfo2 package (for LaTeX integration)
 - Zotero account with API access (for bibliography features)
+- Typst CLI (for Typst compilation) - install from https://typst.app/
 
 ## License
 
@@ -328,12 +378,24 @@ MIT License - see LICENSE file for details.
 
 ## Changelog
 
-### v1.2.0
-- Add font installation command (`install-fonts`) for XeLaTeX projects
-- Support Marianne and Roboto Mono fonts by default
+### v1.4.0
+- Add full Typst document compilation support
+- New `TypstCompiler` class for Typst documents
+- Auto-detection of `.typ` files with automatic engine selection
+- Watch mode for Typst with live recompilation
+- Custom font path support (`--font-path` option)
+- New project types: `typst-presentation` and `typst-poster`
+- Theme installation now includes Typst files (e.g., `numpex.typ`)
+- Typst configuration section in config files
+
+### v1.3.0
 - Add theme installation command (`install-theme`) for Beamer presentations
 - Built-in support for numpex theme with automatic download
 - Extended GitHub Actions workflow with XeLaTeX and multi-document support
+
+### v1.2.0
+- Add font installation command (`install-fonts`) for XeLaTeX projects
+- Support Marianne and Roboto Mono fonts by default
 - Add presentation project type with Beamer template support
 - Add `--engine` option for xelatex and lualatex compilation
 - Improved CI/CD with font installation steps

@@ -5,7 +5,6 @@ Tests for Issue #1: XeLaTeX and LuaLaTeX engine support
 """
 
 import subprocess
-from pathlib import Path
 from unittest.mock import patch, MagicMock
 import pytest
 
