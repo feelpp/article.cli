@@ -4,17 +4,14 @@ Theme installation module for article-cli
 Provides functionality to download and install Beamer themes for presentations.
 """
 
-import os
 import zipfile
 import tempfile
-import shutil
 from pathlib import Path
 from typing import List, Dict, Optional, Any
 from urllib.request import urlopen, Request
 from urllib.error import URLError, HTTPError
 
 from .zotero import print_error, print_info, print_success, print_warning
-
 
 # Default theme sources
 DEFAULT_THEME_SOURCES: Dict[str, Dict[str, Any]] = {
@@ -381,7 +378,9 @@ class ThemeInstaller:
         print_info("")
         print_info("To use this theme in Typst:")
         print_info(f'  #import "{name}.typ": *')
-        print_info(f"  #show: {name}-theme.with(title: \"Your Title\", author: \"Your Name\")")
+        print_info(
+            f'  #show: {name}-theme.with(title: "Your Title", author: "Your Name")'
+        )
 
 
 def get_available_themes() -> Dict[str, Dict[str, Any]]:

@@ -4,11 +4,8 @@ Tests for article-cli repository setup module
 Tests project type support including article, presentation, and poster templates.
 """
 
-import os
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock
-import pytest
 
 from article_cli.repository_setup import RepositorySetup
 

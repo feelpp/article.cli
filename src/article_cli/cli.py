@@ -85,7 +85,13 @@ Environment variables:
     )
     init_parser.add_argument(
         "--type",
-        choices=["article", "presentation", "poster", "typst-presentation", "typst-poster"],
+        choices=[
+            "article",
+            "presentation",
+            "poster",
+            "typst-presentation",
+            "typst-poster",
+        ],
         default="article",
         help="Project type (default: article). Use 'presentation' for Beamer, 'typst-presentation' for Typst slides.",
     )
@@ -343,10 +349,10 @@ def handle_compile_command(args: argparse.Namespace, config: Config) -> int:
         if engine == "typst":
             from .typst_compiler import TypstCompiler
 
-            compiler = TypstCompiler(config)
+            typst_compiler = TypstCompiler(config)
 
             # Compile the document
-            success = compiler.compile(
+            success = typst_compiler.compile(
                 typ_file=doc_file,
                 output_dir=args.output_dir,
                 font_paths=args.font_paths,
@@ -355,7 +361,7 @@ def handle_compile_command(args: argparse.Namespace, config: Config) -> int:
         else:
             from .latex_compiler import LaTeXCompiler
 
-            compiler = LaTeXCompiler(config)
+            latex_compiler = LaTeXCompiler(config)
 
             # Clean before compilation if requested
             if args.clean_first:
@@ -365,7 +371,7 @@ def handle_compile_command(args: argparse.Namespace, config: Config) -> int:
                 git_manager.clean_latex_files(latex_config["clean_extensions"])
 
             # Compile the document
-            success = compiler.compile(
+            success = latex_compiler.compile(
                 tex_file=doc_file,
                 engine=engine,
                 shell_escape=args.shell_escape,
@@ -560,7 +566,7 @@ def handle_config_command(args: argparse.Namespace, config: Config) -> int:
 def handle_install_fonts_command(args: argparse.Namespace, config: Config) -> int:
     """Handle the install-fonts command"""
     try:
-        from .fonts import FontInstaller, install_fonts_from_config
+        from .fonts import FontInstaller
 
         fonts_config = config.get_fonts_config()
 

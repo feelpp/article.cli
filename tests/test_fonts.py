@@ -3,11 +3,9 @@ Tests for font installation module
 """
 
 import pytest
-import tempfile
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 import zipfile
-import io
 
 from article_cli.fonts import FontInstaller, DEFAULT_FONT_SOURCES
 
@@ -180,9 +178,7 @@ class TestFontInstaller:
         font_dir.mkdir()
 
         installer = FontInstaller(fonts_dir=fonts_dir)
-        result = installer.install_font(
-            "TestFont", "http://example.com/test.zip", force=True
-        )
+        installer.install_font("TestFont", "http://example.com/test.zip", force=True)
 
         assert mock_download.called
 

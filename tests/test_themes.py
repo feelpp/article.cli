@@ -7,7 +7,6 @@ import tempfile
 import zipfile
 from pathlib import Path
 from unittest.mock import patch, MagicMock
-from io import BytesIO
 
 from article_cli.themes import (
     ThemeInstaller,
@@ -342,7 +341,9 @@ class TestTypstThemeSupport:
             installer = ThemeInstaller(themes_dir=tmp_path, sources=custom_sources)
 
             # Mock the download
-            with patch.object(installer, "_download_and_extract_theme") as mock_download:
+            with patch.object(
+                installer, "_download_and_extract_theme"
+            ) as mock_download:
                 installer.install_theme("test-theme", force=True)
 
                 # Check that all_files includes both LaTeX and Typst files

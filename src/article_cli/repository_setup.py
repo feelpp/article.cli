@@ -279,11 +279,16 @@ class RepositorySetup:
             # Format authors for Typst
             authors_typst = ", ".join([f'"{author}"' for author in authors])
 
-            if project_type in ("typst-presentation", "presentation") and filename.endswith(".typ"):
+            if project_type in (
+                "typst-presentation",
+                "presentation",
+            ) and filename.endswith(".typ"):
                 doc_content = self._get_typst_presentation_template(
                     title, authors_typst, theme
                 )
-            elif project_type in ("typst-poster", "poster") and filename.endswith(".typ"):
+            elif project_type in ("typst-poster", "poster") and filename.endswith(
+                ".typ"
+            ):
                 doc_content = self._get_typst_poster_template(title, authors_typst)
             else:
                 doc_content = self._get_typst_presentation_template(
@@ -512,7 +517,7 @@ Branch: \\gitBranch
             theme_show = f"#show: {theme}-theme.with("
         else:
             theme_import = "// No theme specified - using basic Typst presentation"
-            theme_show = "#set page(paper: \"presentation-16-9\")\n#set text(size: 24pt)\n\n// Document metadata\n#let title = "
+            theme_show = '#set page(paper: "presentation-16-9")\n#set text(size: 24pt)\n\n// Document metadata\n#let title = '
 
         if theme:
             return f"""{theme_import}
@@ -874,7 +879,6 @@ Branch: \\gitBranch
 
         # Build additional document compilation steps
         additional_compile_steps = ""
-        additional_rename_steps = ""
         additional_artifact_files = ""
         additional_release_files = ""
 
