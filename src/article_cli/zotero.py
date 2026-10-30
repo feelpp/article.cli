@@ -7,7 +7,7 @@ error handling, and rate limiting.
 
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
+from typing import Any, Dict, Iterator, List, Optional, Sequence, Set, Tuple
 import time
 
 from .reporting import print_error, print_info, print_success, print_warning
@@ -28,41 +28,63 @@ BIBLATEX_AUX_CITE_RE = re.compile(r"\\abx@aux@cite\{[^{}]*\}\{([^{}]+)\}")
 TYPST_CITE_RE = re.compile(r"(?<![\w.-])@([A-Za-z0-9_:+.-]+)")
 
 
-def split_bibtex_entries(content: str) -> List[str]:
-    """Split BibTeX content into balanced entries."""
-    entries: List[str] = []
+BIBTEX_START_RE = re.compile(r"@(\w+)\s*\{")
+
+
+def _bibtex_entry_spans(content: str) -> Iterator[Tuple[int, int, str, List[int]]]:
+    """Yield complete entries and their top-level comma positions.
+
+    Nested values, quoted strings, escaped delimiters, and line comments do not
+    create entry or field boundaries. Incomplete input is left unclassified.
+    """
     index = 0
-    while True:
-        start = content.find("@", index)
-        if start == -1:
-            break
+    while index < len(content):
+        if content[index] == "%":
+            newline = content.find("\n", index)
+            index = newline + 1 if newline >= 0 else len(content)
+            continue
+        header = BIBTEX_START_RE.match(content, index)
+        if header is None:
+            index += 1
+            continue
 
-        brace = content.find("{", start)
-        if brace == -1:
-            break
-
-        depth = 0
-        end = brace
-        while end < len(content):
-            char = content[end]
-            if char == "{":
-                depth += 1
-            elif char == "}":
-                depth -= 1
-                if depth == 0:
-                    end += 1
-                    break
-            end += 1
-
-        if depth == 0:
-            entry = content[start:end].strip()
-            if entry:
-                entries.append(entry)
-            index = end
+        start = index
+        index = header.end()
+        depth = 1
+        quoted = False
+        commas: List[int] = []
+        while index < len(content):
+            char = content[index]
+            if char == "\\":
+                index += 2
+                continue
+            if depth == 1 and not quoted and char == "%":
+                newline = content.find("\n", index)
+                index = newline + 1 if newline >= 0 else len(content)
+                continue
+            if char == '"' and depth == 1:
+                quoted = not quoted
+            elif not quoted:
+                if char == "{":
+                    depth += 1
+                elif char == "}":
+                    depth -= 1
+                    if depth == 0:
+                        index += 1
+                        yield start, index, header.group(1).lower(), commas
+                        break
+                elif char == "," and depth == 1:
+                    commas.append(index)
+            index += 1
         else:
-            break
+            return
 
-    return entries
+
+def split_bibtex_entries(content: str) -> List[str]:
+    """Split BibTeX content into complete, balanced entries."""
+    return [
+        content[start:end].strip() for start, end, _, _ in _bibtex_entry_spans(content)
+    ]
 
 
 def extract_bibtex_keys(content: str) -> Set[str]:
@@ -296,29 +318,34 @@ class ZoteroBibTexUpdater:
         Returns:
             Tuple of (filtered_content, num_removed)
         """
-        import re
+        pieces: List[str] = []
+        cursor = 0
+        removed = 0
+        for start, end, entry_type, commas in _bibtex_entry_spans(content):
+            # BibTeX directives are not bibliography records.
+            if entry_type in {"comment", "string", "preamble"} or not commas:
+                continue
+            fields: List[Optional[str]] = []
+            for left, right in zip(commas, commas[1:] + [end - 1]):
+                field = content[left + 1 : right]
+                # Comments before a field or after a trailing comma are harmless.
+                field = re.sub(r"^(?:\s|%[^\n]*(?:\n|$))*", "", field)
+                if not field:
+                    continue
+                match = re.match(r"([A-Za-z][A-Za-z0-9_:-]*)\s*=\s*\S", field)
+                # Unknown/malformed fields are preserved rather than guessed empty.
+                fields.append(match.group(1).lower() if match else None)
+            if fields and fields != ["keywords"]:
+                continue
+            pieces.append(content[cursor:start])
+            cursor = end
+            removed += 1
 
-        # Pattern to match BibTeX entries
-        entry_pattern_empty = r"@\w+\{[^,]*,\s*\}"
-        entry_pattern_keywords = r"@\w+\{[^,]*,\s*keywords\s*=\s*\{[^}]*\},*\s*\}"
-
-        # Find all empty entries (those with just the citation key and closing brace)
-        empty_entries = re.findall(entry_pattern_empty, content)
-        # Find all entries that only have a keywords field
-        empty_entries += re.findall(entry_pattern_keywords, content)
-
-        if not empty_entries:
+        if not removed:
             return content, 0
-
-        # Remove empty entries
-        filtered_content = content
-        for entry in empty_entries:
-            filtered_content = filtered_content.replace(entry, "")
-
-        # Clean up multiple blank lines
-        filtered_content = re.sub(r"\n\s*\n\s*\n+", "\n\n", filtered_content)
-
-        return filtered_content, len(empty_entries)
+        pieces.append(content[cursor:])
+        filtered_content = re.sub(r"\n\s*\n\s*\n+", "\n\n", "".join(pieces))
+        return filtered_content, removed
 
     def _normalize_bibtex_content(self, content: str) -> str:
         """Return BibTeX entries sorted by citation key for stable output."""
