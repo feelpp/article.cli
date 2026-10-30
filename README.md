@@ -533,7 +533,7 @@ Use `[tool.article-cli.release] tag_policy = "semver"` when a repository must re
 
 ## Requirements
 
-- Python 3.9+
+- Python 3.11+
 - Git repository with gitinfo2 package (for LaTeX integration)
 - Zotero account with API access (for bibliography features)
 - Typst CLI (for Typst compilation) - install from https://typst.app/
@@ -552,6 +552,10 @@ MIT License - see LICENSE file for details.
 5. Open a Pull Request
 
 ## Changelog
+
+### v2.1.0
+- Require Python 3.11+ and use its built-in TOML parser
+- Add LaTeX and Typst submission bundles and portable paper version metadata
 
 ### v2.0.1
 - Keep Python package, generated-template minimum version, Antora component version, docs package version, and lockfiles synchronized

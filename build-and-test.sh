@@ -35,15 +35,6 @@ run_command() {
 echo -e "${YELLOW}📦 Installing dependencies...${NC}"
 run_command "pip install -e ."
 
-# Check if optional dependencies are available
-echo -e "${YELLOW}🧪 Checking optional dependencies...${NC}"
-if python -c "import tomli" 2>/dev/null; then
-    echo -e "${GREEN}✅ tomli available for Python < 3.11${NC}"
-else
-    echo -e "${YELLOW}⚠️  Installing tomli for TOML support${NC}"
-    run_command "pip install tomli"
-fi
-
 # Build the package
 echo -e "${YELLOW}🏗️  Building package...${NC}"
 if ! command -v build &> /dev/null; then

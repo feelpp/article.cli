@@ -9,13 +9,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional, Union
 import argparse
 
-try:
-    import tomllib  # Python 3.11+
-except ImportError:
-    try:
-        import tomli as tomllib  # fallback for older Python versions
-    except ImportError:
-        tomllib = None
+import tomllib
 
 
 class Config:
@@ -67,7 +61,7 @@ class Config:
         config_path = self._find_config_file()
         self.loaded_config_file = config_path.resolve() if config_path else None
 
-        if config_path and tomllib:
+        if config_path:
             try:
                 with open(config_path, "rb") as f:
                     full_config = tomllib.load(f)
@@ -104,12 +98,6 @@ class Config:
                 if not self.quiet:
                     print(f"Warning: Could not load config file {config_path}: {e}")
                 self._config_data = {}
-        elif config_path and not tomllib:
-            if not self.quiet:
-                print(
-                    "Warning: TOML support not available. Install dependencies with: uv sync"
-                )
-            self._config_data = {}
         else:
             self._config_data = {}
 

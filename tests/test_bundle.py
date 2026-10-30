@@ -270,3 +270,42 @@ def test_real_biblatex_bundle_carries_biber_inputs(tmp_path):
         assert not any(
             name.endswith((".bcf", ".run.xml")) for name in archive.namelist()
         )
+
+
+@pytest.mark.parametrize("suffix", [".tex", ".typ"])
+@pytest.mark.parametrize("include_pdf", [False, True])
+def test_broad_includes_respect_main_pdf_policy(tmp_path, suffix, include_pdf):
+    """Old PDFs and build-path aliases must not override main-PDF policy."""
+    (tmp_path / "paper").with_suffix(suffix).write_text("Paper")
+    (tmp_path / "paper.pdf").write_text("stale PDF from an earlier build")
+    build = tmp_path / "build"
+    build.mkdir()
+    (build / "paper.pdf").write_text("current main PDF")
+    (tmp_path / "figure.pdf").write_text("required figure PDF")
+    if suffix == ".tex":
+        (build / "paper.fls").write_text(
+            f"PWD {tmp_path}\nINPUT paper.tex\nINPUT figure.pdf\n"
+        )
+    else:
+        (build / "paper.typst-deps.json").write_text(
+            json.dumps({"inputs": ["paper.typ", "figure.pdf"]})
+        )
+    config = tmp_path / "config.toml"
+    config.write_text(
+        f'[documents]\nmain="paper{suffix}"\n'
+        '[workflow]\noutput_dir="build"\n'
+        '[bundle]\ninclude=["**/*"]\n'
+    )
+    service = BundleService(Config(config, quiet=True), cwd=tmp_path)
+    plan = service.plan(BundleOptions(no_build=True, include_pdf=include_pdf))
+    output = service.write(plan)
+    with zipfile.ZipFile(output) as archive:
+        pdfs = {name for name in archive.namelist() if name.endswith(".pdf")}
+        assert pdfs == ({"figure.pdf", "paper.pdf"} if include_pdf else {"figure.pdf"})
+        if include_pdf:
+            assert archive.read("paper.pdf") == b"current main PDF"
+
+
+def test_broad_includes_do_not_duplicate_generated_bibliography(project):
+    plan = service_for(project).plan(BundleOptions(no_build=True, include=("**/*",)))
+    assert {name for name in plan.files if name.endswith(".bbl")} == {"paper.bbl"}

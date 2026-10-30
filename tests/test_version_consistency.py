@@ -10,10 +10,7 @@ import yaml
 import article_cli
 from article_cli.repository_setup import ARTICLE_CLI_MIN_VERSION
 
-try:
-    import tomllib
-except ModuleNotFoundError:  # pragma: no cover - Python 3.9/3.10
-    import tomli as tomllib
+import tomllib
 
 
 ROOT = Path(__file__).resolve().parents[1]

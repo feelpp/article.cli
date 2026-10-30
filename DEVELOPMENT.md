@@ -1,6 +1,16 @@
 # Article CLI Development Setup
 
 This guide helps you set up the article-cli package for development and distribution.
+Python 3.11 or newer is required.
+
+CI runs archive and paper-version tests in a dedicated compiler integration job with
+LaTeX, Biber, Typst 0.15.1 and Poppler installed. To run the same checks locally:
+
+```bash
+uv run pytest tests/test_bundle.py tests/test_bundle_typst.py tests/test_paper_version.py
+```
+
+These tests skip compiler-specific cases when the corresponding tools are unavailable locally.
 
 ## Development Setup
 

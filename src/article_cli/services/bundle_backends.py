@@ -8,13 +8,13 @@ backends can implement the protocol without inheriting a service implementation.
 import json
 import os
 import re
+import tomllib
 from xml.etree import ElementTree
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Mapping, Optional, Protocol, Tuple
 
 from ..command_runner import CommandRunner
-from ..config import tomllib
 from ..project_context import LATEX_ENGINES
 
 TYPST_PACKAGES = ".article-cli/typst-packages"
@@ -314,8 +314,6 @@ class TypstBundleBackend:
             if not manifest.is_file():
                 continue
             try:
-                if tomllib is None:
-                    raise ValueError("TOML support is required for Typst packages.")
                 data = tomllib.loads(manifest.read_text())
                 package = data.get("package", {})
                 if (

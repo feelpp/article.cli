@@ -230,6 +230,10 @@ class BundleService:
         add(BundleDependency(document, document.name, root), needed=True)
         for dependency in backend.dependencies(build):
             add(dependency, needed=True)
+        # Broad includes must not reintroduce stale main PDFs or compiler-output
+        # aliases for dependencies already placed at their portable archive paths.
+        automatic_sources = {path.resolve() for path in files.values()}
+        main_pdf_sources = {main_pdf.resolve(), document.with_suffix(".pdf").resolve()}
         for pattern in include:
             matches = list(root.glob(pattern))
             if not matches:
@@ -237,7 +241,11 @@ class BundleService:
             for match in matches:
                 paths = match.rglob("*") if match.is_dir() else [match]
                 for path in paths:
-                    if path.is_file():
+                    if (
+                        path.is_file()
+                        and path.resolve() not in automatic_sources
+                        and path.resolve() not in main_pdf_sources
+                    ):
                         add(
                             BundleDependency(
                                 path, path.relative_to(root).as_posix(), root

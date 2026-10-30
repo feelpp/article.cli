@@ -16,6 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Portable Typst Git snapshots with version/commit/branch/date/dirty state, integrated with `version`, `compile`, templates, and paper release workflows. LaTeX templates use local `gitinfo2` snapshots for archive portability.
 - Adjacent JSON manifests record source hashes and the archive checksum; existing archives require `--force` to replace.
 
+### Changed
+- Require Python 3.11+ for article-cli and generated projects; remove the TOML backport and use the standard-library parser.
+- Use Twine 7 to validate modern package metadata and run package validation on pull requests.
+- Exercise source bundles and versioned PDFs in CI with real LaTeX, Biber and Typst compilers.
+
+### Fixed
+- Broad bundle include patterns respect the main-PDF policy and do not add stale PDFs or duplicate generated bibliography files.
 
 ## [1.4.0] - 2026-01-18
 
