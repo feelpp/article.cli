@@ -4,6 +4,8 @@ Tests for deterministic Zotero BibTeX synchronization.
 
 from pathlib import Path
 
+import pytest
+
 from article_cli.zotero import (
     ZoteroBibTexUpdater,
     extract_bibtex_keys,
@@ -164,3 +166,81 @@ def test_transient_zotero_failures_are_retried(tmp_path, monkeypatch):
 
     assert updater.update(backup=False) is True
     assert len(updater.session.calls) == 2
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [
+        "",
+        "keywords = {laser, output}",
+        "keywords = {laser, output},",
+        "KEYWORDS = {laser, {GPU}},",
+        'keywords = "laser, output",',
+        "keywords = {{laser}, {nested {GPU}}},",
+        "keywords = tags_macro,",
+        'keywords = {laser} # ", output" # tags_macro,',
+    ],
+)
+def test_filter_removes_only_empty_or_keywords_only_entries(tmp_path, fields):
+    updater = make_updater(tmp_path, [])
+    entry = "@misc{empty,\n" + fields + "\n}"
+    sentinel = "@article{keep, title = {Keep me}}"
+    filtered, removed = updater._filter_empty_entries(entry + "\n\n" + sentinel)
+    assert removed == 1
+    assert filtered.strip() == sentinel
+
+
+@pytest.mark.parametrize(
+    "entry",
+    [
+        "@article{valid, keywords = {laser, {GPU}}, title = {A valid paper}}",
+        '@article{valid, keywords = "laser, output", title = {A valid paper}}',
+        "@article{valid, keywords = {laser, {nested {GPU}}}, author = {Doe, Jane}}",
+        "@article{valid, title = {A literal @misc{example, keywords = {GPU}}}}",
+        '@article{valid, title = "A quoted @misc{example, keywords = {GPU}}"}',
+        "@article{valid, keywords = {laser}, % preserve another field\n title = {Paper}}",
+        "@article{valid, keywords = {laser}, abstract = {More than keywords}}",
+        "@comment{An empty-looking example @misc{example, keywords = {GPU}}}",
+        '@string{example = "A literal @misc{example, keywords = {GPU}}"}',
+    ],
+)
+def test_filter_preserves_complete_valid_entries_and_directives(tmp_path, entry):
+    updater = make_updater(tmp_path, [])
+    filtered, removed = updater._filter_empty_entries(entry)
+    assert removed == 0
+    assert filtered == entry
+
+
+def test_deleting_entry_does_not_delete_identical_text_in_title_or_comment(tmp_path):
+    updater = make_updater(tmp_path, [])
+    empty = "@misc{empty, keywords = {laser}}"
+    valid = "@article{valid, title = {Literal " + empty + " in title}}"
+    comment = "% Keep this example: " + empty
+    filtered, removed = updater._filter_empty_entries(
+        comment + "\n" + valid + "\n" + empty
+    )
+    assert removed == 1
+    assert valid in filtered
+    assert comment in filtered
+
+
+def test_zotero_update_preserves_nested_keywords_entry_while_removing_empty_items(
+    tmp_path,
+):
+    valid = """@article{valid,
+    keywords = {laser, {GPU}},
+    title = {A valid paper},
+    author = {Doe, Jane},
+    journal = {Example Journal},
+    year = {2026},
+}"""
+    empty = """@misc{noauthor_notitle_nodate-25, keywords = {laser, output},}
+@misc{noauthor_notitle_nodate-26, keywords = {laser, laserParam},}
+@misc{noauthor_notitle_nodate-27, keywords = {laser, laserParam},}
+"""
+    updater = make_updater(tmp_path, [FakeResponse(valid + "\n" + empty, total=4)])
+    assert updater.update(backup=False)
+    content = (tmp_path / "references.bib").read_text()
+    assert extract_bibtex_keys(content) == {"valid"}
+    assert valid in content
+    assert "% Filtered out: 3 empty entries" in content
