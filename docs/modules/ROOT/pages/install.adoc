@@ -41,7 +41,7 @@ uv run mypy src/
 uv build
 ----
 
-The GitHub Actions workflow runs the test suite across Python 3.9 through 3.13.
+The GitHub Actions workflow runs the test suite across Python 3.11 through 3.13.
 
 == Documentation Site
 

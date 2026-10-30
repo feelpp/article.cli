@@ -9,13 +9,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional, Union
 import argparse
 
-try:
-    import tomllib  # Python 3.11+
-except ImportError:
-    try:
-        import tomli as tomllib  # fallback for older Python versions
-    except ImportError:
-        tomllib = None
+import tomllib
 
 
 class Config:
@@ -67,7 +61,7 @@ class Config:
         config_path = self._find_config_file()
         self.loaded_config_file = config_path.resolve() if config_path else None
 
-        if config_path and tomllib:
+        if config_path:
             try:
                 with open(config_path, "rb") as f:
                     full_config = tomllib.load(f)
@@ -104,12 +98,6 @@ class Config:
                 if not self.quiet:
                     print(f"Warning: Could not load config file {config_path}: {e}")
                 self._config_data = {}
-        elif config_path and not tomllib:
-            if not self.quiet:
-                print(
-                    "Warning: TOML support not available. Install dependencies with: uv sync"
-                )
-            self._config_data = {}
         else:
             self._config_data = {}
 
@@ -203,6 +191,16 @@ class Config:
             "engine": self.get("latex", "engine", "latexmk"),
             "shell_escape": self.get("latex", "shell_escape", False),
             "timeout": self.get("latex", "timeout", 300),
+        }
+
+    def get_bundle_config(self) -> Dict[str, Any]:
+        """Get source archive policy; patterns are document-directory relative."""
+        return {
+            "output": self.get("bundle", "output", ""),
+            "include": self.get("bundle", "include", []),
+            "exclude": self.get("bundle", "exclude", []),
+            "include_pdf": self.get("bundle", "include_pdf", False),
+            "verify": self.get("bundle", "verify", False),
         }
 
     def get_project_config(self) -> Dict[str, Any]:
@@ -425,6 +423,14 @@ shell_escape = false
 
 # Compilation timeout in seconds
 timeout = 300
+
+[bundle]
+# Submission ZIP; paths and globs are relative to the main document directory.
+# output = "dist/paper-sources.zip"
+include = []
+exclude = ["local-only/**", "reviews/**"]
+include_pdf = false
+verify = false
 
 [project]
 # Project type: "article", "typst-article", "presentation", "typst-presentation",

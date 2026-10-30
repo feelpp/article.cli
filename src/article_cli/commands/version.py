@@ -17,7 +17,7 @@ def add_parser(subparsers: Any) -> None:
         "version",
         help="Refresh and report git version metadata",
         description=(
-            "Refresh gitinfo2 metadata and report the current git version state "
+            "Refresh LaTeX gitinfo2 or Typst JSON metadata and report Git state "
             "without creating a tag."
         ),
     )

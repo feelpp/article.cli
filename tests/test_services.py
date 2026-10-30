@@ -154,10 +154,10 @@ output_dir = "build"
     assert service.compile(CompileOptions(clean_first=True, clean_after=True)) is True
     assert FakeLatexCompiler.instances[0].calls == [
         {
-            "tex_file": "paper.tex",
+            "tex_file": str(tmp_path / "paper.tex"),
             "engine": "xelatex",
             "shell_escape": True,
-            "output_dir": "build",
+            "output_dir": str(tmp_path / "build"),
             "watch": False,
         }
     ]
@@ -182,7 +182,7 @@ def test_compiler_service_dispatches_typst(tmp_path):
     assert service.compile(CompileOptions(font_paths=["fonts"], watch=True)) is True
     assert FakeTypstCompiler.instances[0].calls == [
         {
-            "typ_file": "main.typ",
+            "typ_file": str(tmp_path / "main.typ"),
             "output_dir": None,
             "font_paths": ["fonts"],
             "watch": True,

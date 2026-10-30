@@ -14,7 +14,7 @@
 \addbibresource{references.bib}
 
 % Git version information
-\usepackage{gitinfo2}
+\usepackage[local]{gitinfo2}
 
 % Title and authors
 \title{Golden Article}
@@ -52,7 +52,7 @@ Your conclusion goes here.
 \vfill
 \hrule
 \small
-\noindent Git version: \gitAbbrevHash{} (\gitAuthorIsoDate) \\
+\noindent Git version: \gitDescribe{} / \gitAbbrevHash{} (\gitAuthorIsoDate) \\
 Branch: \gitBranch
 
 \end{document}

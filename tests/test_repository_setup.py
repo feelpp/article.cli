@@ -17,10 +17,7 @@ from article_cli.git_manager import GitManager
 from article_cli.repository_setup import ARTICLE_CLI_MIN_VERSION, RepositorySetup
 from article_cli.template_renderer import TEMPLATE_VERSION
 
-try:
-    import tomllib
-except ModuleNotFoundError:  # pragma: no cover - exercised on Python < 3.11
-    import tomli as tomllib  # type: ignore[no-redef]
+import tomllib
 
 
 def init_git_repository(path: Path) -> None:

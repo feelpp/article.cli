@@ -16,6 +16,7 @@ from ..config import Config
 from ..git_hooks import gitinfo2_metadata_summary, refresh_gitinfo2_metadata
 from ..git_manager import GitManager
 from ..project_context import ProjectContext
+from ..paper_version import refresh_typst_metadata, TYPST_METADATA_FILE
 from ..reporting import print_error, print_info, print_success, print_warning
 from .bibliography import BibliographyService, BibliographyUpdateOptions
 from .compiler import CompileOptions, CompilerService
@@ -140,10 +141,10 @@ class ReleaseService:
             if not self._run_bibliography(resolved.bibliography):
                 return False
 
-        if not self._refresh_metadata():
+        if not self._refresh_metadata(context):
             return False
 
-        if resolved.commit and not self._commit_metadata(resolved.tag):
+        if resolved.commit and not self._commit_metadata(resolved.tag, context):
             return False
 
         if resolved.compile_pdf and not self._compile(resolved):
@@ -159,7 +160,7 @@ class ReleaseService:
             created_tag = True
             print_success(f"Created release tag: {resolved.tag}")
 
-            if not self._refresh_metadata():
+            if not self._refresh_metadata(context):
                 self._print_rollback(resolved.tag)
                 return False
 
@@ -283,9 +284,21 @@ class ReleaseService:
         )
         return self.bibliography_service_cls(self.config).update(args, options)
 
-    def _refresh_metadata(self) -> bool:
+    def _refresh_metadata(self, context: ProjectContext) -> bool:
         """Refresh gitinfo2 metadata and print the current summary."""
+        if context.is_typst and context.document is not None:
+            snapshot = refresh_typst_metadata(context.document.parent)
+            if snapshot is not None:
+                print_info(f"Version metadata: {snapshot.description}")
+                return True
+            print_error("Could not refresh Typst Git metadata.")
+            return False
         if refresh_gitinfo2_metadata(self.manager.repo_root):
+            if context.document is not None:
+                source = self.manager.repo_root / "gitHeadLocal.gin"
+                target = context.document.parent / "gitHeadLocal.gin"
+                if source.is_file() and source != target:
+                    target.write_bytes(source.read_bytes())
             summary = gitinfo2_metadata_summary(self.manager.repo_root)
             if summary:
                 print_info(f"Version metadata: {summary}")
@@ -293,15 +306,19 @@ class ReleaseService:
         print_error("Could not refresh gitinfo2 metadata.")
         return False
 
-    def _commit_metadata(self, tag: str) -> bool:
+    def _commit_metadata(self, tag: str, context: ProjectContext) -> bool:
         """Commit gitHeadLocal.gin only when explicitly requested."""
-        metadata_path = self.manager.repo_root / "gitHeadLocal.gin"
+        metadata_path = (
+            context.document.parent / TYPST_METADATA_FILE
+            if context.is_typst and context.document is not None
+            else self.manager.repo_root / "gitHeadLocal.gin"
+        )
         if not metadata_path.exists():
-            print_warning("gitHeadLocal.gin does not exist; nothing to commit.")
+            print_warning(f"{metadata_path.name} does not exist; nothing to commit.")
             return True
         self.manager.commit_paths(
-            ["gitHeadLocal.gin"],
-            f"Update gitinfo2 metadata before release {tag}",
+            [metadata_path.relative_to(self.manager.repo_root).as_posix()],
+            f"Update paper version metadata before release {tag}",
         )
         return True
 
@@ -523,11 +540,15 @@ def pdf_contains_text(pdf_path: Path, text: str, runner: CommandRunner) -> bool:
         print_error(result.stderr.strip() or "Could not extract PDF text")
         return False
     if text not in result.stdout:
-        print_error(f"PDF text does not contain release tag {text}.")
-        print_info("Rebuild the PDF after tagging, or disable with --no-pdf-check.")
+        print_error(f"PDF text does not contain expected version {text}.")
+        print_info(
+            "Display the generated Git description in the document and rebuild. "
+            "For LaTeX use gitinfo2's \\gitDescribe; "
+            "for Typst display the snapshot's description field."
+        )
         return False
 
-    print_success(f"PDF text contains release tag {text}")
+    print_success(f"PDF text contains expected version {text}")
     return True
 
 

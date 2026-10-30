@@ -49,12 +49,43 @@ article-cli compile --watch
 article-cli compile --clean-first --clean-after
 ----
 
+== Submission Source Bundles
+
+[source,console]
+----
+article-cli bundle main.tex --verify
+article-cli bundle main.typ --verify
+article-cli bundle --dry-run
+article-cli bundle --include 'supplement/**' --exclude 'reviews/**'
+article-cli bundle --no-build --build-dir build -o dist/preprint.zip
+article-cli bundle --include-pdf --force
+----
+
+The command selects a compiler backend and writes a source ZIP plus a JSON manifest.
+LaTeX uses `latexmk` and TeX recorder data; Typst 0.14+ uses native JSON dependencies.
+Typst imports, data files, figures, bibliography files/styles, configured local fonts,
+and used external packages are collected automatically.
+Used packages are copied under `.article-cli/typst-packages` with manifests and licenses.
+`--verify` compiles the selected files in a temporary directory before writing the ZIP.
+`--dry-run` lists files from existing build data without changing files.
+`--no-build` reuses LaTeX recorder data or `<document>.typst-deps.json` from a previous Typst bundle build.
+Use `--force` to replace existing output.
+
+Paths are relative to the main document directory, which becomes the ZIP root.
+Keep local dependencies and the build directory inside that directory.
+Git repository internals, environments, private `local-only` files, and build logs are excluded.
+Portable version snapshots are included when the document reads them.
+The main PDF requires `--include-pdf`; figure PDFs are included as dependencies.
+LaTeX shell escape is disabled. Local verification does not guarantee service acceptance.
+See xref:configuration.adoc[configuration] for include/exclude policy.
+
 == Version and Release
 
 [source,console]
 ----
 article-cli version
 article-cli version --dry-run
+article-cli version --document main.typ --compile --check-pdf
 article-cli release v1 --dry-run
 article-cli release v1
 article-cli release v1 --bib check --push
@@ -62,6 +93,12 @@ article-cli release v1 --github-release --push
 article-cli list --count 10
 article-cli delete v1
 ----
+
+The `version` command refreshes `gitinfo2`'s `gitHeadLocal.gin` for LaTeX or
+`gitHeadLocal.json` for Typst. Use `\usepackage[local]{gitinfo2}` in LaTeX,
+or `#let git = json("gitHeadLocal.json")` and `#git.description` in Typst.
+The snapshot stays usable when Git is unavailable in an extracted bundle.
+`version --dry-run` leaves metadata unchanged; `release` refreshes it before and after tagging.
 
 == Assets
 

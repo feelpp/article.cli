@@ -15,7 +15,7 @@
 % \addbibresource{references.bib}
 
 % Git version information
-\usepackage{gitinfo2}
+\usepackage[local]{gitinfo2}
 
 % Title and authors
 \title{[[ title ]]}
@@ -62,7 +62,7 @@
 
   \vspace{1cm}
   \small
-  Git version: \gitAbbrevHash{} (\gitAuthorIsoDate)
+  Git version: \gitDescribe{} / \gitAbbrevHash{} (\gitAuthorIsoDate)
 \end{frame}
 
 \end{document}

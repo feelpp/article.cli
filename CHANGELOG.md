@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-10-30
+
+### Added
+- `article-cli bundle` creates reproducible LaTeX and Typst source ZIPs through a shared service and injectable compiler strategies. LaTeX uses TeX recorder dependencies; Typst uses native JSON dependency reporting.
+- Project include/exclude policy in `[tool.article-cli.bundle]`, repeatable CLI overrides, optional main PDF, dry-run file listing, and clean compilation verification.
+- Typst bundle support includes imports, dynamic data, bibliography/styles, configured local fonts, and vendored external packages.
+- Portable Typst Git snapshots with version/commit/branch/date/dirty state, integrated with `version`, `compile`, templates, and paper release workflows. LaTeX templates use local `gitinfo2` snapshots for archive portability.
+- Adjacent JSON manifests record source hashes and the archive checksum; existing archives require `--force` to replace.
+
+### Changed
+- Require Python 3.11+ for article-cli and generated projects; remove the TOML backport and use the standard-library parser.
+- Use Twine 7 to validate modern package metadata and run package validation on pull requests.
+- Exercise source bundles and versioned PDFs in CI with real LaTeX, Biber and Typst compilers.
+
+### Fixed
+- Broad bundle include patterns respect the main-PDF policy and do not add stale PDFs or duplicate generated bibliography files.
+
 ## [1.4.0] - 2026-01-18
 
 ### Added
@@ -220,6 +237,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `article-cli config show` - Show current configuration
 - `article-cli config create` - Create sample configuration
 
+[2.1.0]: https://github.com/feelpp/article.cli/compare/v2.0.1...v2.1.0
 [1.4.0]: https://github.com/feelpp/article.cli/releases/tag/v1.4.0
 [1.3.2]: https://github.com/feelpp/article.cli/releases/tag/v1.3.2
 [1.3.1]: https://github.com/feelpp/article.cli/releases/tag/v1.3.1

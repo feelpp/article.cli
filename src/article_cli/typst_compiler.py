@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from .config import Config
+from .paper_version import refresh_typst_metadata
 from .reporting import print_error, print_info, print_success
 
 
@@ -53,6 +54,8 @@ class TypstCompiler:
             print_error(f"Typst file not found: {typ_file}")
             return False
 
+        if refresh_typst_metadata(typ_path.resolve().parent) is not None:
+            print_info("Updated Typst Git version metadata")
         print_info(f"Compiling {typ_file} with Typst...")
 
         # Merge font paths from config and arguments
@@ -60,6 +63,12 @@ class TypstCompiler:
         if font_paths:
             all_font_paths.extend(font_paths)
 
+        if output_dir:
+            try:
+                Path(output_dir).mkdir(parents=True, exist_ok=True)
+            except OSError as error:
+                print_error(f"Cannot create Typst output directory: {error}")
+                return False
         if watch:
             return self._compile_watch(typ_path, output_dir, all_font_paths)
         else:

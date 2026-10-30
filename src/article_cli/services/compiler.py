@@ -85,6 +85,13 @@ class CompilerService:
             return False
         return self._compile_latex(context, options)
 
+    @staticmethod
+    def _output_directory(context: ProjectContext) -> Optional[str]:
+        """Pass absolute paths to compilers so service cwd never needs os.chdir."""
+        if context.output_dir is None:
+            return None
+        return str((context.project_root / context.output_dir).resolve())
+
     def _compile_typst(
         self,
         context: ProjectContext,
@@ -94,8 +101,8 @@ class CompilerService:
         compiler = self.typst_compiler_cls(self.config)
         return bool(
             compiler.compile(
-                typ_file=context.document_name or str(context.document),
-                output_dir=context.output_dir_name,
+                typ_file=str(context.document),
+                output_dir=self._output_directory(context),
                 font_paths=options.font_paths,
                 watch=options.watch,
             )
@@ -115,10 +122,10 @@ class CompilerService:
         compiler = self.latex_compiler_cls(self.config)
         success = bool(
             compiler.compile(
-                tex_file=context.document_name or str(context.document),
+                tex_file=str(context.document),
                 engine=context.engine,
                 shell_escape=context.shell_escape,
-                output_dir=context.output_dir_name,
+                output_dir=self._output_directory(context),
                 watch=options.watch,
             )
         )

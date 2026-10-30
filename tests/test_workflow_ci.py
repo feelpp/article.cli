@@ -8,10 +8,7 @@ import yaml
 
 from article_cli.repository_setup import RepositorySetup
 
-try:
-    import tomllib
-except ModuleNotFoundError:  # pragma: no cover - exercised on Python < 3.11
-    import tomli as tomllib  # type: ignore[no-redef]
+import tomllib
 
 
 def _init_project(tmp_path: Path, **kwargs: object) -> tuple[str, dict]:

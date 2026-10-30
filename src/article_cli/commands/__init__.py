@@ -4,6 +4,7 @@ Command modules for article-cli.
 
 from . import (
     bibtex,
+    bundle,
     clean,
     compile,
     config,
@@ -25,6 +26,7 @@ COMMAND_MODULES = [
     version,
     release,
     bibtex,
+    bundle,
     config,
     fonts,
     themes,

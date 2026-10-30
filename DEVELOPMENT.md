@@ -1,6 +1,16 @@
 # Article CLI Development Setup
 
 This guide helps you set up the article-cli package for development and distribution.
+Python 3.11 or newer is required.
+
+CI runs archive and paper-version tests in a dedicated compiler integration job with
+LaTeX, Biber, Typst 0.15.1 and Poppler installed. To run the same checks locally:
+
+```bash
+uv run pytest tests/test_bundle.py tests/test_bundle_typst.py tests/test_paper_version.py
+```
+
+These tests skip compiler-specific cases when the corresponding tools are unavailable locally.
 
 ## Development Setup
 
@@ -217,3 +227,40 @@ When you need to update the tool:
 2. Update version in `pyproject.toml`
 3. Build and publish new version
 4. Users update with: `uv tool upgrade article-cli`
+
+
+## Source bundle API and compiler strategies
+
+`BundleService` orchestrates a shared workflow: resolve the document, select a
+backend, build, collect required files, apply policy, optionally verify in a
+clean directory, and publish a deterministic ZIP plus a manifest.
+
+```python
+from article_cli.config import Config
+from article_cli.services import BundleOptions, BundleService
+
+service = BundleService(Config("pyproject.toml"))
+plan = service.plan(BundleOptions(document="main.typ", verify=True))
+archive = service.write(plan)
+```
+
+`BundleBackend` is a structural `Protocol` (Strategy pattern) with a source suffix
+and two operations: `compile(BundleBuild)` and `dependencies(BundleBuild)`.
+`LatexBundleBackend` and `TypstBundleBackend` encapsulate native compiler behavior;
+the archive service has no source parser. `BundleBuild` and `BundleDependency`
+are immutable data objects. A dependency carries its source, portable archive
+name, and allowed source root; shared policy checks containment, exclusions,
+collisions, and required-file availability for both backends.
+
+Callers can inject `BundleService(..., backends={engine: backend})` or a
+`CommandRunner` for testing. The default registry maps the existing LaTeX engines
+and `typst` to their strategies. Dependencies are collected from `.fls`/`.aux` (and Biber `.bcf`)
+or Typst 0.14+ `--deps --deps-format json`; no regex-based Typst parser is used.
+Typst package sources are vendored under `.article-cli/typst-packages` without
+rewriting imports, and verification resolves fonts and packages from the staged
+archive contents. System fonts and TeX distributions remain environment inputs.
+
+`GitSnapshot` in `paper_version.py` separates Git reads from document rendering.
+Typst consumes safely serialized JSON; LaTeX uses the existing `gitinfo2` adapter.
+`version` and `release` select the appropriate output format. Compiler services
+pass absolute paths so the API works without changing the process directory.

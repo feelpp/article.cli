@@ -103,7 +103,7 @@ article.cli/
 ### Updating Dependencies
 
 1. Update `pyproject.toml` dependencies section
-2. Test with different Python versions (3.8-3.12)
+2. Test with different Python versions (3.11-3.13)
 3. Update CI if needed
 4. Document any breaking changes
 
@@ -120,7 +120,7 @@ article.cli/
 
 1. **Build and Test** (`ci.yml`):
    - Triggered on: push to main/develop, pull requests
-   - Tests: Python 3.8, 3.9, 3.10, 3.11, 3.12
+   - Tests: Python 3.11, 3.12, 3.13
    - Checks: Black, flake8, mypy, CLI functionality
    - Artifacts: Built package for distribution
 
@@ -191,7 +191,7 @@ uv pip install black flake8 mypy types-requests pytest
 - **Default Zotero Group ID**: `4678293` (for article.template)
 - **Default Output File**: `references.bib`
 - **Default Branch**: `main`
-- **Python Support**: 3.8 - 3.12
+- **Python Support**: 3.11+
 
 ## 🔗 Important Links
 
