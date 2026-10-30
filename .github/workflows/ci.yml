@@ -88,7 +88,14 @@ jobs:
     - name: Install LaTeX and PDF tools
       run: |
         sudo apt-get update
-        sudo apt-get install -y --no-install-recommends latexmk texlive-latex-extra texlive-fonts-recommended biber poppler-utils
+        sudo apt-get install -y --no-install-recommends \
+          latexmk texlive-latex-extra texlive-fonts-recommended \
+          texlive-bibtex-extra biber poppler-utils
+
+    - name: Check bibliography tools
+      run: |
+        kpsewhich biblatex.sty
+        biber --version
 
     - name: Verify archives and versioned PDFs with real compilers
       run: uv run --locked pytest tests/test_bundle.py tests/test_bundle_typst.py tests/test_paper_version.py
