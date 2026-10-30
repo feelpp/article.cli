@@ -44,6 +44,7 @@ Examples:
   %(prog)s bib update --check             # Check checked-in bibliography freshness
   %(prog)s bib update                     # Update references from Zotero
   %(prog)s compile                        # Compile configured main document
+  %(prog)s bundle --verify                # Prepare a submission source ZIP
   %(prog)s version                        # Refresh and report git metadata
   %(prog)s version --compile --check-pdf  # Refresh, compile, and inspect PDF text
   %(prog)s release v1 --dry-run           # Preview release tag creation

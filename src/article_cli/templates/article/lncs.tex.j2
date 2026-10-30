@@ -4,7 +4,7 @@
 \usepackage{graphicx}
 \usepackage{amsmath,amssymb}
 \usepackage{hyperref}
-\usepackage{gitinfo2}
+\usepackage[local]{gitinfo2}
 
 \title{[[ title ]]}
 \author{[[ authors_latex ]]}
@@ -45,7 +45,7 @@ Add acknowledgements here.
 \vfill
 \hrule
 \small
-\noindent Git version: \gitAbbrevHash{} (\gitAuthorIsoDate) \\
+\noindent Git version: \gitDescribe{} / \gitAbbrevHash{} (\gitAuthorIsoDate) \\
 Branch: \gitBranch
 
 \end{document}

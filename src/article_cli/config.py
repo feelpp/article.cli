@@ -205,6 +205,16 @@ class Config:
             "timeout": self.get("latex", "timeout", 300),
         }
 
+    def get_bundle_config(self) -> Dict[str, Any]:
+        """Get source archive policy; patterns are document-directory relative."""
+        return {
+            "output": self.get("bundle", "output", ""),
+            "include": self.get("bundle", "include", []),
+            "exclude": self.get("bundle", "exclude", []),
+            "include_pdf": self.get("bundle", "include_pdf", False),
+            "verify": self.get("bundle", "verify", False),
+        }
+
     def get_project_config(self) -> Dict[str, Any]:
         """Get project-level configuration"""
         return {
@@ -425,6 +435,14 @@ shell_escape = false
 
 # Compilation timeout in seconds
 timeout = 300
+
+[bundle]
+# Submission ZIP; paths and globs are relative to the main document directory.
+# output = "dist/paper-sources.zip"
+include = []
+exclude = ["local-only/**", "reviews/**"]
+include_pdf = false
+verify = false
 
 [project]
 # Project type: "article", "typst-article", "presentation", "typst-presentation",

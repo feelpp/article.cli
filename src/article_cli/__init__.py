@@ -9,7 +9,7 @@ This package provides tools for:
 - Git hooks setup
 """
 
-__version__ = "2.0.1"
+__version__ = "2.1.0"
 __author__ = "Christophe Prud'homme"
 __email__ = "prudhomm@cemosis.fr"
 

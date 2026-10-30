@@ -16,6 +16,7 @@ from .git_hooks import (
     install_managed_gitinfo2_hook,
     refresh_gitinfo2_metadata,
 )
+from .paper_version import METADATA_EXCLUDES
 from .reporting import Colors, print_error, print_info, print_success, print_warning
 
 
@@ -294,7 +295,7 @@ class GitManager:
         """Return dirty tracked/untracked files, optionally ignoring gitHeadLocal.gin."""
         pathspec = ["--", "."]
         if ignore_gitinfo:
-            pathspec.append(":(exclude)gitHeadLocal.gin")
+            pathspec.extend(METADATA_EXCLUDES)
         result = self.git(["status", "--porcelain", *pathspec])
         if result.returncode != 0:
             return ["<could not inspect git status>"]

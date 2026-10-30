@@ -14,10 +14,11 @@ from pathlib import Path
 from typing import List, Optional, Sequence, Union
 
 from .git_hooks import ensure_gitinfo2_hook_source
+from .paper_version import GitSnapshot, read_git_snapshot, write_typst_snapshot
 from .template_renderer import TEMPLATE_VERSION, TemplateRenderer
 from .reporting import print_error, print_info, print_success
 
-ARTICLE_CLI_MIN_VERSION = "2.0.1"
+ARTICLE_CLI_MIN_VERSION = "2.1.0"
 ARTICLE_TEMPLATES = {
     ("article", "default"): "article/main.tex.j2",
     ("article", "lncs"): "article/lncs.tex.j2",
@@ -422,6 +423,10 @@ class RepositorySetup:
                 )
 
         doc_path.write_text(doc_content, encoding="utf-8")
+        if is_typst and not (doc_path.parent / "gitHeadLocal.json").exists():
+            write_typst_snapshot(
+                read_git_snapshot(self.repo_path) or GitSnapshot(), doc_path.parent
+            )
         print_success(f"Created: {doc_path.relative_to(self.repo_path)}")
         return True
 

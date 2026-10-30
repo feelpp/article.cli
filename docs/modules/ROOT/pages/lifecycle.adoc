@@ -26,7 +26,7 @@ Build the configured document.
 The command reports the selected engine, output directory, version metadata, page count when `pdfinfo` is available, and common LaTeX warning counts.
 
 `version`::
-Refresh and report gitinfo2 metadata without creating a tag.
+Refresh and report paper version metadata without creating a tag: `gitHeadLocal.gin` for LaTeX, `gitHeadLocal.json` for Typst.
 
 `release`::
 Create a checked paper release.

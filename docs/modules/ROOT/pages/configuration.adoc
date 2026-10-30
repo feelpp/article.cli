@@ -57,6 +57,36 @@ build_dir = "build"
 font_paths = ["fonts"]
 ----
 
+== Submission Source Bundles
+
+[source,toml]
+----
+[tool.article-cli.bundle]
+output = "dist/preprint.zip"
+include = ["supplement/**"]
+exclude = ["reviews/**", "local-only/**"]
+include_pdf = false
+verify = true
+----
+
+The ZIP root and all patterns are relative to the main document directory.
+`include` adds files to automatically detected dependencies.
+Command-line `--include` and `--exclude` patterns extend configured lists.
+Exclusions take precedence; excluding a required dependency is an error.
+Globs support `*`, `?`, character classes, and recursive `**` (including zero directories).
+Patterns cannot contain absolute paths or `..` components.
+
+The default policy excludes Git metadata, virtual environments, Python caches,
+`local-only` directories, `.env` files, and build logs.
+`include_pdf` controls the generated main PDF; required figure PDFs remain included.
+`verify` recompiles the selected sources in isolation before writing output.
+The same policy applies to `.tex` and `.typ` documents.
+For Typst, `[tool.article-cli.typst].font_paths` directories must be under the
+main document directory. Font files are included and search paths are recorded
+in the manifest. Imported external packages are copied into the source archive.
+Use `--no-verify` or `--no-include-pdf` for one-off overrides.
+The same keys work in a standalone `.article-cli.toml` under `[bundle]`.
+
 == Workflow
 
 [source,toml]

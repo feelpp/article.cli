@@ -10,6 +10,7 @@ import subprocess
 from pathlib import Path
 from typing import List, Optional
 
+from .paper_version import METADATA_EXCLUDES
 from .reporting import print_info, print_success, print_warning
 
 MANAGED_HOOK_START = "# >>> article-cli gitinfo2 hook >>>"
@@ -279,7 +280,7 @@ def _is_dirty_for_gitinfo2(repo_path: Path) -> bool:
             "--untracked-files=no",
             "--",
             ".",
-            ":(exclude)gitHeadLocal.gin",
+            *METADATA_EXCLUDES,
         ],
     )
     return bool(result and result.stdout.strip())

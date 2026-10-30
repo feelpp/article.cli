@@ -191,3 +191,27 @@ def test_release_summary_prints_assets_git_state_and_checksums(
     assert "PDF pages: 4" in output
     assert f"Checksum: {checksum_path}" in output
     assert "SHA256:" in output
+
+
+def test_missing_pdf_version_explains_how_to_display_metadata(
+    tmp_path, monkeypatch, capsys
+):
+    from article_cli.services.release import pdf_contains_text
+
+    class Runner:
+        def run(self, command, **kwargs):
+            return subprocess.CompletedProcess(
+                command, 0, "Paper without a version stamp", ""
+            )
+
+    pdf = tmp_path / "paper.pdf"
+    pdf.write_bytes(b"fixture")
+    monkeypatch.setattr(
+        "article_cli.services.release.shutil.which", lambda name: "/usr/bin/pdftotext"
+    )
+    assert not pdf_contains_text(pdf, "v1-0-gabcdef0-*", Runner())
+    captured = capsys.readouterr()
+    assert "expected version v1-0-gabcdef0-*" in captured.err
+    assert "gitDescribe" in captured.out
+    assert "Typst" in captured.out
+    assert "--no-pdf-check" not in captured.out

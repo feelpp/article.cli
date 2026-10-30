@@ -64,10 +64,10 @@ output_dir = "build"
 
     assert result == 0
     compile_mock.assert_called_once_with(
-        tex_file="paper.tex",
+        tex_file=str(tmp_path / "paper.tex"),
         engine="xelatex",
         shell_escape=True,
-        output_dir="build",
+        output_dir=str(tmp_path / "build"),
         watch=False,
     )
 
@@ -108,10 +108,10 @@ output_dir = "build"
 
     assert result == 0
     compile_mock.assert_called_once_with(
-        tex_file="paper.tex",
+        tex_file=str(tmp_path / "paper.tex"),
         engine="pdflatex",
         shell_escape=False,
-        output_dir="out",
+        output_dir=str(tmp_path / "out"),
         watch=False,
     )
 
@@ -280,11 +280,12 @@ def test_setup_dry_run_is_forwarded_to_git_manager():
     manager_cls.return_value.setup_hooks.assert_called_once_with(dry_run=True)
 
 
-def test_version_dry_run_is_forwarded_to_git_manager():
+def test_version_dry_run_is_forwarded_to_git_manager(tmp_path):
     """version --dry-run should not refresh files."""
     args = SimpleNamespace(dry_run=True)
 
     with patch("article_cli.commands.version.GitManager") as manager_cls:
+        manager_cls.return_value.repo_root = tmp_path
         manager_cls.return_value.refresh_version_metadata.return_value = True
         result = version_command.run(args, Config(quiet=True))
 

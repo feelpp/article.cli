@@ -6,7 +6,7 @@
 \usepackage{booktabs}
 
 % Git version information
-\usepackage{gitinfo2}
+\usepackage[local]{gitinfo2}
 
 % Title and authors
 \title{[[ title ]]}
@@ -49,7 +49,7 @@
 }
 
 \note[targetoffsetx=0cm, targetoffsety=-8cm, width=0.4\textwidth]{
-  Git version: \gitAbbrevHash{} (\gitAuthorIsoDate)
+  Git version: \gitDescribe{} / \gitAbbrevHash{} (\gitAuthorIsoDate)
 }
 
 \end{document}

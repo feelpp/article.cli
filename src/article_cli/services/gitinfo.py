@@ -1,5 +1,5 @@
 """
-gitinfo2 metadata service.
+Paper version metadata service for LaTeX and Typst.
 """
 
 from dataclasses import dataclass
@@ -10,6 +10,7 @@ from ..command_runner import DEFAULT_RUNNER, CommandRunner
 from ..config import Config
 from ..git_manager import GitManager
 from ..project_context import ProjectContext
+from ..paper_version import refresh_typst_metadata, read_git_snapshot
 from ..reporting import print_error, print_info, print_success
 from .compiler import CompileOptions, CompilerService
 from .release import _absolute_pdf_path, pdf_contains_text, write_sha256
@@ -17,7 +18,7 @@ from .release import _absolute_pdf_path, pdf_contains_text, write_sha256
 
 @dataclass(frozen=True)
 class VersionOptions:
-    """User-facing gitinfo2 version workflow options."""
+    """User-facing paper version workflow options."""
 
     dry_run: bool = False
     compile_pdf: bool = False
@@ -31,7 +32,7 @@ class VersionOptions:
 
 
 class GitInfoService:
-    """Service boundary for gitinfo2 metadata refresh/reporting."""
+    """Resolve document format, refresh provenance, and validate versioned PDFs."""
 
     def __init__(
         self,
@@ -53,8 +54,42 @@ class GitInfoService:
         if isinstance(options, bool):
             return self.manager.refresh_version_metadata(options)
 
-        if not self.manager.refresh_version_metadata(options.dry_run):
+        context = ProjectContext.resolve(
+            self.config,
+            cwd=self.manager.repo_root,
+            document=options.document,
+            engine=options.engine,
+            output_dir=options.output_dir,
+        )
+        if options.compile_pdf or options.check_pdf or options.checksum:
+            if context.document is None or not context.document.is_file():
+                print_error(
+                    f"No paper document found in {self.manager.repo_root}. "
+                    "Run from the paper repository or select its main file with --document. "
+                    "No version metadata was changed."
+                )
+                return False
+        snapshot = None
+        if context.is_typst and context.document is not None:
+            snapshot = refresh_typst_metadata(context.document.parent, options.dry_run)
+            if snapshot is None:
+                print_error(
+                    "Paper version metadata requires a Git repository with a commit."
+                )
+                return False
+            print_info(f"Git version: {snapshot.description}; branch {snapshot.branch}")
+            if options.dry_run:
+                print_info("Would refresh gitHeadLocal.json beside the Typst document.")
+            else:
+                print_success("Refreshed gitHeadLocal.json")
+        elif not self.manager.refresh_version_metadata(options.dry_run):
             return False
+        elif not options.dry_run and context.document is not None:
+            # gitinfo2's local mode also works when the main source is nested.
+            source = self.manager.repo_root / "gitHeadLocal.gin"
+            target = context.document.parent / "gitHeadLocal.gin"
+            if source.is_file() and source != target:
+                target.write_bytes(source.read_bytes())
 
         if options.dry_run:
             self._print_dry_run(options)
@@ -75,7 +110,9 @@ class GitInfoService:
                 return False
 
         if options.check_pdf:
-            expected_text = options.tag or self._current_description()
+            expected_text = options.tag or (
+                snapshot.description if snapshot else self._current_description()
+            )
             if not expected_text:
                 print_error("Could not determine a version string for PDF checking.")
                 return False
@@ -117,6 +154,9 @@ class GitInfoService:
 
     def _current_description(self) -> Optional[str]:
         """Return the current git describe string."""
+        snapshot = read_git_snapshot(self.manager.repo_root)
+        if snapshot is not None:
+            return snapshot.description
         result = self.manager.git(
             ["describe", "--tags", "--long", "--always", "--dirty=-*"]
         )
